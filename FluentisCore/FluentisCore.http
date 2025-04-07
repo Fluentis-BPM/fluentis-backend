@@ -1,0 +1,6 @@
+@FluentisCore_HostAddress = http://localhost:5155
+
+GET {{FluentisCore_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
