@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+
+
+echo 'Build'
+
+dotnet build --no-restore
+
+echo 'Test'
+
+dotnet test --no-restore
+
+echo 'Completed pre-commit changes'
