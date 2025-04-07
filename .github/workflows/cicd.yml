@@ -53,5 +53,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/fluentis-core:latest
-            ${{ secrets.DOCKER_USERNAME }}/fluentis-core:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/fluentis-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/fluentis-backend:${{ github.sha }}
