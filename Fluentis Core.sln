@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35919.96
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fluentis Core", "Fluentis Core.csproj", "{A1AC40A7-976E-4D00-8FA4-AA73F14853E0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1AC40A7-976E-4D00-8FA4-AA73F14853E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1AC40A7-976E-4D00-8FA4-AA73F14853E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1AC40A7-976E-4D00-8FA4-AA73F14853E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1AC40A7-976E-4D00-8FA4-AA73F14853E0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {21DC73EA-81A1-445E-9342-93F9F4498C82}
+	EndGlobalSection
+EndGlobal
