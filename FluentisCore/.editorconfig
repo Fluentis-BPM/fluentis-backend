@@ -1,0 +1,3 @@
+[*.cs]
+dotnet_diagnostic.SA1600.severity = error  # Ejemplo: falta de documentación como error
+dotnet_diagnostic.SA1309.severity = warning  # Ejemplo: nombres con guion bajo como advertencia
