@@ -2,12 +2,13 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 
-COPY ["Fluentis Core.sln", "."]
-COPY ["Fluentis Core.csproj", "."]
-RUN dotnet restore "Fluentis Core.csproj"
+COPY ["FluentisCore.sln", "."]
+COPY ["FluentisCore/FluentisCore.csproj", "FluentisCore/"]
+RUN dotnet restore "FluentisCore/FluentisCore.csproj"
 
 # Copiar el código y publicar
-COPY "." "."
+COPY "FluentisCore/." "FluentisCore/"
+WORKDIR "/src/FluentisCore"
 RUN dotnet publish -c Release -o /app/publish
 
 # ===== ETAPA DE EJECUCIÓN =====
@@ -20,4 +21,4 @@ ENV ASPNETCORE_ENVIRONMENT=Development
 ENV ASPNETCORE_URLS=http://+:80 
 
 EXPOSE 80  
-ENTRYPOINT ["dotnet", "Fluentis Core.dll"]
+ENTRYPOINT ["dotnet", "FluentisCore.dll"]
