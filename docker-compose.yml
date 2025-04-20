@@ -24,7 +24,7 @@ services:
       - sqlserver
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=IncidentsDB;User Id=sa;Password=ApiTestKey123!;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=FluentisDB;User Id=sa;Password=ApiTestKey123!;TrustServerCertificate=True;
     ports:
       - "8080:80"
 

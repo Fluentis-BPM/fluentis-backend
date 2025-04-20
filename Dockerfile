@@ -4,6 +4,8 @@ WORKDIR /src
 
 COPY ["FluentisCore.sln", "."]
 COPY ["FluentisCore/FluentisCore.csproj", "FluentisCore/"]
+ARG HUSKY=0
+ENV HUSKY=${HUSKY}
 RUN dotnet restore "FluentisCore/FluentisCore.csproj"
 
 # Copiar el código y publicar
