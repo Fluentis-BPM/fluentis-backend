@@ -5,10 +5,12 @@
         "companyName": "ASOFARMA",
         "copyrightText": "Copyright (c) {companyName}. All rights reserved.",
         "documentPrivateElements": false,
-        "documentInternalElements": false
+        "documentInternalElements": false,
+        "documentExposedElements": false
       },
       "orderingRules": {
-        "usingDirectivesPlacement": "outsideNamespace"
+        "usingDirectivesPlacement": "outsideNamespace",
+        "systemUsingDirectivesFirst": false
       },
       "namingRules": {
         "allowCommonHungarianPrefixes": true

@@ -27,6 +27,11 @@ namespace FluentisCore.Models.UserManagement
         [StringLength(255)]
         public string Nombre { get; set; }
 
+        public int? JefeRolId { get; set; }
+
+        [ForeignKey("JefeRolId")]
+        public virtual Rol JefeRol { get; set; }
+
         public ICollection<Usuario> Usuarios { get; set; }
     }
 
