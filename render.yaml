@@ -2,6 +2,7 @@ envVarGroups:
   - name: sqlserver-creds
     envVars:
       - key: SA_PASSWORD
+        value: ApiTestKey123!
 
 services:
   - type: pserv
@@ -9,10 +10,14 @@ services:
     runtime: image
     image:
       url: mcr.microsoft.com/mssql/server:2022-latest
-    plan: starter
+    plan: standard
     envVars:
       - key: ACCEPT_EULA
         value: Y
+      - key: SA_PASSWORD
+        value: ApiTestKey123!
+      - key: MSSQL_PID
+        value: Express
       - fromGroup: sqlserver-creds
     disk:
       name: sqlserver-data
@@ -27,5 +32,5 @@ services:
     #   url: jcdiegolopez/fluentis-core-develop:latest
     envVars:
       - key: ConnectionStrings__DefaultConnection
-        value: Server=sqlserver,1433;Database=your_database_name;User ID=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+        value: Server=sqlserver,1433;Database=your_database_name;User ID=sa;Password=ApiTestKey123!;TrustServerCertificate=True;
       - fromGroup: sqlserver-creds
