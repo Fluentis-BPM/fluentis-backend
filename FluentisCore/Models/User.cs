@@ -44,6 +44,10 @@ namespace FluentisCore.Models.UserManagement
         [StringLength(255)]
         public string Email { get; set; }
 
+        [Required]
+        [StringLength(100)]
+        public string Oid { get; set; }
+
         public int? DepartamentoId { get; set; }
 
         [ForeignKey("DepartamentoId")]
