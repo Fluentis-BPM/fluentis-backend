@@ -1,0 +1,31 @@
+envVarGroups:
+  - name: sqlserver-creds
+    envVars:
+      - key: SA_PASSWORD
+
+services:
+  - type: pserv
+    name: sqlserver
+    runtime: image
+    image:
+      url: mcr.microsoft.com/mssql/server:2022-latest
+    plan: starter
+    envVars:
+      - key: ACCEPT_EULA
+        value: Y
+      - fromGroup: sqlserver-creds
+    disk:
+      name: sqlserver-data
+      mountPath: /var/opt/mssql
+      sizeGB: 10
+  - type: web
+    name: api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # runtime: image
+    # image:
+    #   url: jcdiegolopez/fluentis-core-develop:latest
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        value: Server=sqlserver,1433;Database=your_database_name;User ID=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - fromGroup: sqlserver-creds

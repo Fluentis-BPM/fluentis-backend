@@ -2,9 +2,9 @@ name: CI-CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build-and-lint:
@@ -45,8 +45,8 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # 8. Construir y subir la imagen a Docker Hub (solo en push a main)
-      - name: Build and push Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Build and push Docker image on master
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -55,3 +55,15 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/fluentis-core:latest
             ${{ secrets.DOCKER_USERNAME }}/fluentis-core:${{ github.sha }}
+
+          # 8. Construir y subir la imagen a Docker Hub (solo en push a main)
+      - name: Build and push Docker image on develop
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/fluentis-core-develop:latest
+            ${{ secrets.DOCKER_USERNAME }}/fluentis-core-develop:${{ github.sha }}
