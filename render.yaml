@@ -1,0 +1,18 @@
+envVarGroups:
+  - name: sqlserver-creds
+    envVars:
+      - key: SA_PASSWORD
+        value: ApiTestKey123!
+
+services:
+  - type: web
+    name: api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # runtime: image
+    # image:
+    #   url: jcdiegolopez/fluentis-core-develop:latest
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        value: Server=tcp:fluentis.database.windows.net,1433;Initial Catalog=fluentis;Persist Security Info=False;User ID=sadmin;Password=ApiTestKey123!;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+      - fromGroup: sqlserver-creds
