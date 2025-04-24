@@ -17,6 +17,22 @@ namespace FluentisCore.Models.UserManagement
         public ICollection<Usuario> Usuarios { get; set; }
     }
 
+    public class Cargo
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int IdCargo { get; set; }
+
+        [Required]
+        [StringLength(255)]
+        public string Nombre { get; set; }
+
+        public int? JefeCargoId { get; set; }
+
+        [ForeignKey("JefeCargoId")]
+        public virtual Rol JefeCargo { get; set; }
+    }
+
     public class Rol
     {
         [Key]
@@ -26,13 +42,6 @@ namespace FluentisCore.Models.UserManagement
         [Required]
         [StringLength(255)]
         public string Nombre { get; set; }
-
-        public int? JefeRolId { get; set; }
-
-        [ForeignKey("JefeRolId")]
-        public virtual Rol JefeRol { get; set; }
-
-        public ICollection<Usuario> Usuarios { get; set; }
     }
 
     public class Usuario
@@ -62,5 +71,10 @@ namespace FluentisCore.Models.UserManagement
 
         [ForeignKey("RolId")]
         public virtual Rol Rol { get; set; }
+
+        public int? CargoId { get; set; }
+
+        [ForeignKey("RolId")]
+        public virtual Cargo Cargo { get; set; }
     }
 }
