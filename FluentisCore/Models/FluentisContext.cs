@@ -161,6 +161,20 @@ namespace FluentisCore.Models
                     .OnDelete(DeleteBehavior.NoAction); // 🔴 Disable cascade
             });
 
+            modelBuilder.Entity<Cargo>(entity =>
+            {
+                entity.HasKey(e => e.IdCargo);
+
+                entity.Property(e => e.Nombre)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                // Configuramos solo la relación JefeCargo → Cargo sin collection inversa
+                entity.HasOne(e => e.JefeCargo)        // propiedad de navegación de referencia
+                    .WithMany()                        // SIN parámetro: no hay colección inversa
+                    .HasForeignKey(e => e.IdJefeCargo) // la FK real en IdJefeCargo
+                    .OnDelete(DeleteBehavior.NoAction);// deshabilita cascada :contentReference[oaicite:1]{index=1}
+            });
             // Other configurations...
         }
     }
