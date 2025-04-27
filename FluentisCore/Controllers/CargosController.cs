@@ -12,47 +12,47 @@ namespace FluentisCore.Controllers
 {
     [Route("/[controller]")]
     [ApiController]
-    public class DepartamentosController : ControllerBase
+    public class CargosController : ControllerBase
     {
         private readonly FluentisContext _context;
 
-        public DepartamentosController(FluentisContext context)
+        public CargosController(FluentisContext context)
         {
             _context = context;
         }
 
-        // GET: api/Departamentoes
+        // GET: api/Cargos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Departamento>>> GetDepartamentos()
+        public async Task<ActionResult<IEnumerable<Cargo>>> GetCargo()
         {
-            return await _context.Departamentos.ToListAsync();
+            return await _context.Cargo.ToListAsync();
         }
 
-        // GET: api/Departamentoes/5
+        // GET: api/Cargos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Departamento>> GetDepartamento(int id)
+        public async Task<ActionResult<Cargo>> GetCargo(int id)
         {
-            var departamento = await _context.Departamentos.FindAsync(id);
+            var cargo = await _context.Cargo.FindAsync(id);
 
-            if (departamento == null)
+            if (cargo == null)
             {
                 return NotFound();
             }
 
-            return departamento;
+            return cargo;
         }
 
-        // PUT: api/Departamentoes/5
+        // PUT: api/Cargos/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutDepartamento(int id, Departamento departamento)
+        public async Task<IActionResult> PutCargo(int id, Cargo cargo)
         {
-            if (id != departamento.IdDepartamento)
+            if (id != cargo.IdCargo)
             {
                 return BadRequest();
             }
 
-            _context.Entry(departamento).State = EntityState.Modified;
+            _context.Entry(cargo).State = EntityState.Modified;
 
             try
             {
@@ -60,7 +60,7 @@ namespace FluentisCore.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!DepartamentoExists(id))
+                if (!CargoExists(id))
                 {
                     return NotFound();
                 }
@@ -73,36 +73,36 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
-        // POST: api/Departamentoes
+        // POST: api/Cargos
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Departamento>> PostDepartamento(Departamento departamento)
+        public async Task<ActionResult<Cargo>> PostCargo(Cargo cargo)
         {
-            _context.Departamentos.Add(departamento);
+            _context.Cargo.Add(cargo);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetDepartamento", new { id = departamento.IdDepartamento }, departamento);
+            return CreatedAtAction("GetCargo", new { id = cargo.IdCargo }, cargo);
         }
 
-        // DELETE: api/Departamentoes/5
+        // DELETE: api/Cargos/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDepartamento(int id)
+        public async Task<IActionResult> DeleteCargo(int id)
         {
-            var departamento = await _context.Departamentos.FindAsync(id);
-            if (departamento == null)
+            var cargo = await _context.Cargo.FindAsync(id);
+            if (cargo == null)
             {
                 return NotFound();
             }
 
-            _context.Departamentos.Remove(departamento);
+            _context.Cargo.Remove(cargo);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool DepartamentoExists(int id)
+        private bool CargoExists(int id)
         {
-            return _context.Departamentos.Any(e => e.IdDepartamento == id);
+            return _context.Cargo.Any(e => e.IdCargo == id);
         }
     }
 }
