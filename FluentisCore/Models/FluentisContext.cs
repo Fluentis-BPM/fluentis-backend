@@ -177,5 +177,6 @@ namespace FluentisCore.Models
             });
             // Other configurations...
         }
+        public DbSet<FluentisCore.Models.UserManagement.Cargo> Cargo { get; set; } = default!;
     }
 }
