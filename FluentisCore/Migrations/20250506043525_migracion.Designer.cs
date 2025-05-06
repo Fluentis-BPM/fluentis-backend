@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250506043525_migracion")]
+    partial class migracion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1220,7 +1223,8 @@ namespace FluentisCore.Migrations
 
                     b.HasOne("FluentisCore.Models.UserManagement.Rol", "Rol")
                         .WithMany("Usuarios")
-                        .HasForeignKey("RolId");
+                        .HasForeignKey("RolId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Cargo");
 
