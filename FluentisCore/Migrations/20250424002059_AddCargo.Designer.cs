@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250424002059_AddCargo")]
+    partial class AddCargo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -595,7 +598,7 @@ namespace FluentisCore.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdCargo"));
 
-                    b.Property<int>("IdJefeCargo")
+                    b.Property<int?>("JefeCargoId")
                         .HasColumnType("int");
 
                     b.Property<string>("Nombre")
@@ -605,7 +608,7 @@ namespace FluentisCore.Migrations
 
                     b.HasKey("IdCargo");
 
-                    b.HasIndex("IdJefeCargo");
+                    b.HasIndex("JefeCargoId");
 
                     b.ToTable("Cargo");
                 });
@@ -679,8 +682,6 @@ namespace FluentisCore.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("IdUsuario");
-
-                    b.HasIndex("CargoId");
 
                     b.HasIndex("DepartamentoId");
 
@@ -1199,26 +1200,24 @@ namespace FluentisCore.Migrations
 
             modelBuilder.Entity("FluentisCore.Models.UserManagement.Cargo", b =>
                 {
-                    b.HasOne("FluentisCore.Models.UserManagement.Cargo", "JefeCargo")
+                    b.HasOne("FluentisCore.Models.UserManagement.Rol", "JefeCargo")
                         .WithMany()
-                        .HasForeignKey("IdJefeCargo")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .HasForeignKey("JefeCargoId");
 
                     b.Navigation("JefeCargo");
                 });
 
             modelBuilder.Entity("FluentisCore.Models.UserManagement.Usuario", b =>
                 {
-                    b.HasOne("FluentisCore.Models.UserManagement.Cargo", "Cargo")
-                        .WithMany("Usuarios")
-                        .HasForeignKey("CargoId");
-
                     b.HasOne("FluentisCore.Models.UserManagement.Departamento", "Departamento")
                         .WithMany("Usuarios")
                         .HasForeignKey("DepartamentoId");
 
                     b.HasOne("FluentisCore.Models.UserManagement.Cargo", "Cargo")
+                        .WithMany()
+                        .HasForeignKey("RolId");
+
+                    b.HasOne("FluentisCore.Models.UserManagement.Rol", "Rol")
                         .WithMany()
                         .HasForeignKey("RolId");
 
@@ -1335,11 +1334,6 @@ namespace FluentisCore.Migrations
                     b.Navigation("FlujoBase");
 
                     b.Navigation("Solicitante");
-                });
-
-            modelBuilder.Entity("FluentisCore.Models.UserManagement.Cargo", b =>
-                {
-                    b.Navigation("Usuarios");
                 });
 
             modelBuilder.Entity("FluentisCore.Models.UserManagement.Departamento", b =>
