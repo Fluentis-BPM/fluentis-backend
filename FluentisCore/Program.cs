@@ -42,7 +42,7 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();
     var clientId = configuration["AzureAd:ClientId"];
-    var clientSecret = configuration["AzureAd:ClientSecret"];
+    var clientSecret = configuration["AzureAd:ClientSecre"];
     var tenantId = configuration["AzureAd:TenantId"];
 
     var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
