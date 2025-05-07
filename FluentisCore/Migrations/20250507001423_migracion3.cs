@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FluentisCore.Migrations
 {
     /// <inheritdoc />
-    public partial class migracion : Migration
+    public partial class migracion3 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    [Migration("20250506043625_migracion2")]
-    partial class migracion2
+    [Migration("20250507001423_migracion3")]
+    partial class migracion3
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
