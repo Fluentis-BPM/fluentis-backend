@@ -20,6 +20,8 @@ namespace FluentisCore.Models
         public DbSet<Departamento> Departamentos { get; set; }
         public DbSet<Rol> Roles { get; set; }
 
+        public DbSet<Cargo> Cargos { get; set; }
+
         // Tablas de WorkflowManagement
         public DbSet<FlujoAprobacion> FlujosAprobacion { get; set; }
         public DbSet<PasoFlujo> PasosFlujo { get; set; }
