@@ -14,6 +14,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
+        Console.WriteLine(builder.Configuration["Cors:AllowedOrigins"]);
         policy.WithOrigins(builder.Configuration["Cors:AllowedOrigins"])
               .AllowAnyHeader()
               .AllowAnyMethod();
