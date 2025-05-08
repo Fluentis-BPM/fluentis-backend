@@ -6,6 +6,7 @@ using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
 using Azure.Identity;
 using Microsoft.Graph;
+using FluentisCore.Modules.DBInit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +58,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<FluentisContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
@@ -73,6 +75,22 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FluentisContext>();
     db.Database.Migrate();
+
+    var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
+
+    var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
+    if (File.Exists(jsonPath))
+    {
+        var jsonData = File.ReadAllText(jsonPath);
+        initDB.InsertCargosFromJson(jsonData);
+        initDB.InsertRols();
+        initDB.InsertDepartamentos();
+
+    }
+    else
+    {
+        Console.WriteLine("⚠️ No se encontró el archivo Resources/Cargos.json");
+    }
 }
 
 app.Run();
