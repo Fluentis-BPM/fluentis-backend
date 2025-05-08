@@ -3,6 +3,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+     <UserSecretsId>Asp-ApiFluentis</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <Content Remove="stylecop.json" />
@@ -11,6 +12,7 @@
     <AdditionalFiles Include="stylecop.json" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.13.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.3" />
@@ -24,6 +26,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Graph" Version="5.77.0" />
     <PackageReference Include="Microsoft.Identity.Web" Version="3.8.2" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">

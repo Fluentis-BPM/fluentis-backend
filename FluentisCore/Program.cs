@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Microsoft.OpenApi.Models;
+using Azure.Identity;
+using Microsoft.Graph;
 using FluentisCore.Modules.DBInit;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +14,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(builder.Configuration["Cors:AllowedOrigins"])
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -22,18 +24,30 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(
         options =>
-    {
-        builder.Configuration.Bind("AzureAd", options);
-        options.TokenValidationParameters.RoleClaimType = "roles";
-        options.TokenValidationParameters.ValidateAudience = true;
-        options.TokenValidationParameters.ValidateIssuer = true;
-    }, options => { });
+        {
+            builder.Configuration.Bind("AzureAd", options);
+            options.TokenValidationParameters.RoleClaimType = "roles";
+            options.TokenValidationParameters.ValidateAudience = true;
+            options.TokenValidationParameters.ValidateIssuer = true;
+        }, options => { });
 
 // Configurar autorización con políticas basadas en scopes
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAccessAsUser", policy =>
         policy.RequireClaim("scp", "access_as_user"));
+});
+
+// Configura Microsoft Graph
+builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var clientId = configuration["AzureAd:ClientId"];
+    var clientSecret = configuration["AzureAd:ClientSecret"];
+    var tenantId = configuration["AzureAd:TenantId"];
+
+    var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+    return new GraphServiceClient(credential, new[] { "[invalid url, do not cite]" });
 });
 
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -43,7 +57,6 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<FluentisContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-;
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
