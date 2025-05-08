@@ -37,8 +37,7 @@ namespace FluentisCore.Models.UserManagement
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int IdCargo { get; set; }
 
-        [Required]
-        public int IdJefeCargo { get; set; }
+        public int? IdJefeCargo { get; set; }
 
         [ForeignKey("IdJefeCargo")]
         public virtual Cargo JefeCargo { get; set; }
