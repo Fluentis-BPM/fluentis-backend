@@ -24,13 +24,12 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    [Authorize(Policy = "RequireAccessAsUser")]
+    [Authorize]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
         {
-            // Extrae el OID del usuario desde el token
-            var oid = User.FindFirst("oid")?.Value;
+            var oid = User.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
             if (string.IsNullOrEmpty(oid))
             {
                 return BadRequest(new { Error = "No se pudo obtener el OID del usuario desde el token." });
@@ -129,7 +128,9 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            return this.StatusCode(500, new { Error = "Error interno", Details = ex.Message });
+           Console.WriteLine($"Error interno en Login: {ex}");
+            var errorDetails = ex.InnerException != null ? $"{ex.Message} | Inner: {ex.InnerException.Message}" : ex.Message;
+            return this.StatusCode(500, new { Error = "Error interno", Details = errorDetails });
         }
     }
 }

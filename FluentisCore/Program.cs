@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         Console.WriteLine(builder.Configuration["Cors:AllowedOrigins"]);
-        policy.WithOrigins(builder.Configuration["Cors:AllowedOrigins"])
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -55,8 +55,18 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
     var clientSecret = configuration["AzureAd:ClientSecret"];
     var tenantId = configuration["AzureAd:TenantId"];
 
+    // Imprimir valores para depuración
+    Console.WriteLine($"GraphServiceClient - TenantId: {tenantId}");
+    Console.WriteLine($"GraphServiceClient - ClientId: {clientId}");
+    Console.WriteLine($"GraphServiceClient - ClientSecret: {(string.IsNullOrEmpty(clientSecret) ? "VACÍO" : "CONFIGURADO")}");
+
+    if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret) || string.IsNullOrEmpty(tenantId))
+    {
+        throw new InvalidOperationException("Faltan credenciales de Azure AD para GraphServiceClient");
+    }
+
     var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-    return new GraphServiceClient(credential, new[] { "[invalid url, do not cite]" });
+    return new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
 });
 
 builder.Services.AddControllers().AddJsonOptions(options =>
