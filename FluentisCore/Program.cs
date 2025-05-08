@@ -24,13 +24,21 @@ builder.Services.AddCors(options =>
 // Configurar autenticación con Azure AD
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(
-        options =>
+        jwtOptions =>
         {
-            builder.Configuration.Bind("AzureAd", options);
-            options.TokenValidationParameters.RoleClaimType = "roles";
-            options.TokenValidationParameters.ValidateAudience = true;
-            options.TokenValidationParameters.ValidateIssuer = true;
-        }, options => { });
+            builder.Configuration.Bind("AzureAd", jwtOptions);
+            jwtOptions.TokenValidationParameters.RoleClaimType = "roles";
+            jwtOptions.TokenValidationParameters.ValidateAudience = true;
+            jwtOptions.TokenValidationParameters.ValidateIssuer = true;
+        },
+        identityOptions =>
+        {
+            builder.Configuration.Bind("AzureAd", identityOptions);
+            if (string.IsNullOrEmpty(identityOptions.ClientId))
+            {
+                throw new InvalidOperationException("ClientId no se estableció en MicrosoftIdentityOptions después del binding");
+            }
+        });
 
 // Configurar autorización con políticas basadas en scopes
 builder.Services.AddAuthorization(options =>
@@ -67,7 +75,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowFrontend");
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
