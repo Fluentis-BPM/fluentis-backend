@@ -173,6 +173,7 @@ namespace FluentisCore.Models
                 entity.HasOne(e => e.JefeCargo)        // propiedad de navegación de referencia
                     .WithMany()                        // SIN parámetro: no hay colección inversa
                     .HasForeignKey(e => e.IdJefeCargo) // la FK real en IdJefeCargo
+                    .IsRequired(false) //
                     .OnDelete(DeleteBehavior.NoAction);// deshabilita cascada :contentReference[oaicite:1]{index=1}
             });
             // Other configurations...

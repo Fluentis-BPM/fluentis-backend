@@ -1,0 +1,164 @@
+{
+  "jerarquia": [
+    {
+      "rol": "Director General",
+      "jefe": null,
+      "subordinados": [
+        {
+          "rol": "Gerente Comercial",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Gerente de País",
+              "jefe": "Gerente Comercial",
+              "subordinados": [
+                {
+                  "rol": "Visitador Médico",
+                  "jefe": "Gerente de País",
+                  "subordinados": []
+                },
+                {
+                  "rol": "Analista de Ventas",
+                  "jefe": "Gerente de País",
+                  "subordinados": []
+                },
+                {
+                  "rol": "Supervisor de Ventas",
+                  "jefe": "Gerente de País",
+                  "subordinados": []
+                }
+              ]
+            },
+            {
+              "rol": "Gerente Regional",
+              "jefe": "Gerente Comercial",
+              "subordinados": [
+                {
+                  "rol": "Coordinador de Ventas Regional",
+                  "jefe": "Gerente Regional",
+                  "subordinados": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "rol": "Gerente de Producto",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Especialista en Marketing",
+              "jefe": "Gerente de Producto",
+              "subordinados": []
+            },
+            {
+              "rol": "Coordinador Trade Marketing",
+              "jefe": "Gerente de Producto",
+              "subordinados": []
+            },
+            {
+              "rol": "Analista de Producto",
+              "jefe": "Gerente de Producto",
+              "subordinados": []
+            }
+          ]
+        },
+        {
+          "rol": "Jefe Logística",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Coordinador Inventarios",
+              "jefe": "Jefe Logística",
+              "subordinados": []
+            },
+            {
+              "rol": "Supervisor de Almacén",
+              "jefe": "Jefe Logística",
+              "subordinados": []
+            },
+            {
+              "rol": "Analista de Logística",
+              "jefe": "Jefe Logística",
+              "subordinados": []
+            }
+          ]
+        },
+        {
+          "rol": "Gerente Financiero",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Contador Senior",
+              "jefe": "Gerente Financiero",
+              "subordinados": []
+            },
+            {
+              "rol": "Analista Financiero",
+              "jefe": "Gerente Financiero",
+              "subordinados": []
+            },
+            {
+              "rol": "Asistente Contable",
+              "jefe": "Gerente Financiero",
+              "subordinados": []
+            }
+          ]
+        },
+        {
+          "rol": "Gerente de Recursos Humanos",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Especialista en Nómina",
+              "jefe": "Gerente de Recursos Humanos",
+              "subordinados": []
+            },
+            {
+              "rol": "Coordinador de Capacitación",
+              "jefe": "Gerente de Recursos Humanos",
+              "subordinados": []
+            },
+            {
+              "rol": "Analista de RRHH",
+              "jefe": "Gerente de Recursos Humanos",
+              "subordinados": []
+            }
+          ]
+        },
+        {
+          "rol": "Regente Farmacéutico",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Asistente Farmacéutico",
+              "jefe": "Regente Farmacéutico",
+              "subordinados": []
+            }
+          ]
+        },
+        {
+          "rol": "Gerente de TI",
+          "jefe": "Director General",
+          "subordinados": [
+            {
+              "rol": "Desarrollador Senior",
+              "jefe": "Gerente de TI",
+              "subordinados": []
+            },
+            {
+              "rol": "Administrador de Sistemas",
+              "jefe": "Gerente de TI",
+              "subordinados": []
+            },
+            {
+              "rol": "Soporte Técnico",
+              "jefe": "Gerente de TI",
+              "subordinados": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
