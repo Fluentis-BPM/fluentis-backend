@@ -7,13 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
-using Microsoft.AspNetCore.Authorization;
 
 namespace FluentisCore.Controllers
 {
-    [Route("/[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "RequireAccessAsUser")]
     public class DepartamentosController : ControllerBase
     {
         private readonly FluentisContext _context;
@@ -23,14 +21,14 @@ namespace FluentisCore.Controllers
             _context = context;
         }
 
-        // GET: api/Departamentoes
+        // GET: api/Departamentos
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Departamento>>> GetDepartamentos()
         {
             return await _context.Departamentos.ToListAsync();
         }
 
-        // GET: api/Departamentoes/5
+        // GET: api/Departamentos/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Departamento>> GetDepartamento(int id)
         {
@@ -44,7 +42,7 @@ namespace FluentisCore.Controllers
             return departamento;
         }
 
-        // PUT: api/Departamentoes/5
+        // PUT: api/Departamentos/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutDepartamento(int id, Departamento departamento)
@@ -75,7 +73,7 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
-        // POST: api/Departamentoes
+        // POST: api/Departamentos
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Departamento>> PostDepartamento(Departamento departamento)
@@ -86,7 +84,7 @@ namespace FluentisCore.Controllers
             return CreatedAtAction("GetDepartamento", new { id = departamento.IdDepartamento }, departamento);
         }
 
-        // DELETE: api/Departamentoes/5
+        // DELETE: api/Departamentos/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDepartamento(int id)
         {
