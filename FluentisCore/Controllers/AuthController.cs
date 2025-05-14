@@ -50,16 +50,20 @@ public class AuthController : ControllerBase
                     {
                         requestConfiguration.QueryParameters.Select = new[] { "displayName", "mail", "jobTitle", "department" };
                     });
+                if (graphUser == null)
+                {
+                    return BadRequest(new { Error = "No se pudo obtener la información del usuario desde Microsoft Graph." });
+                }
 
-                // Obtiene los grupos del usuario
+                    // Obtiene los grupos del usuario
                 var groups = await _graphClient.Users[oid]
-                    .MemberOf
-                    .GetAsync(requestConfiguration =>
-                    {
-                        requestConfiguration.QueryParameters.Select = new[] { "id", "displayName" };
-                    });
+                .MemberOf
+                .GetAsync(requestConfiguration =>
+                {
+                    requestConfiguration.QueryParameters.Select = new[] { "id", "displayName" };
+                });
 
-                var groupIds = groups.Value
+                var groupIds = groups?.Value?
                     .OfType<Microsoft.Graph.Models.DirectoryObject>()
                     .Where(g => g is Microsoft.Graph.Models.Group)
                     .Select(g => g.Id)
@@ -106,6 +110,11 @@ public class AuthController : ControllerBase
                     .Include(u => u.Cargo)
                     .Include(u => u.Rol)
                     .FirstOrDefaultAsync(u => u.Oid == oid);
+
+                if (user == null)
+                    {
+                        return BadRequest(new { Error = "No se pudo cargar el usuario en la base de datos." });
+                    }
             }
 
             // Devuelve la información del usuario
