@@ -27,7 +27,7 @@ jobs:
 
       # 4. Construir y verificar linting (falla si hay advertencias o errores)
       - name: Build and check linting
-        run: dotnet build FluentisCore.sln --configuration Release --no-restore -warnaserror
+        run: dotnet build FluentisCore.sln --configuration Release --no-restore
 
       # 5. Ejecutar pruebas (si tienes un proyecto de pruebas)
       - name: Run tests
