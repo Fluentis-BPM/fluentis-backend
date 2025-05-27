@@ -7,11 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FluentisCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UsuariosController : ControllerBase
     {
         private readonly FluentisContext _context;
@@ -23,6 +25,7 @@ namespace FluentisCore.Controllers
 
         // GET: api/Usuarios
         [HttpGet]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios()
         {
             return await _context.Usuarios.ToListAsync();
@@ -30,6 +33,7 @@ namespace FluentisCore.Controllers
 
         // GET: api/Usuarios/5
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<Usuario>> GetUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);
@@ -45,6 +49,7 @@ namespace FluentisCore.Controllers
         // PUT: api/Usuarios/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
         {
             if (id != usuario.IdUsuario)
@@ -76,6 +81,7 @@ namespace FluentisCore.Controllers
         // POST: api/Usuarios
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
         {
             _context.Usuarios.Add(usuario);
@@ -86,6 +92,7 @@ namespace FluentisCore.Controllers
 
         // DELETE: api/Usuarios/5
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> DeleteUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);

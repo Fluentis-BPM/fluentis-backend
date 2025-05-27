@@ -7,11 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FluentisCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DepartamentosController : ControllerBase
     {
         private readonly FluentisContext _context;

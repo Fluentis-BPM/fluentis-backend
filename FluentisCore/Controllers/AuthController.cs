@@ -8,10 +8,12 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models.LoginRequestManagement;
 using FluentisCore.Models.UserManagement;
+using Microsoft.Graph.Models;
 
 namespace FluentisCore.Controllers{
 [ApiController]
 [Route("/[controller]")]
+[Authorize]
 public class AuthController : ControllerBase
 {
     private readonly FluentisContext _context;
@@ -30,7 +32,12 @@ public class AuthController : ControllerBase
         try
         {
             var oid = User.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
-            if (string.IsNullOrEmpty(oid))
+            Console.WriteLine("User Claims:");
+            foreach (var claim in User.Claims)
+            {
+                Console.WriteLine($"Type: {claim.Type}, Value: {claim.Value}");
+            }
+                if (string.IsNullOrEmpty(oid))
             {
                 return BadRequest(new { Error = "No se pudo obtener el OID del usuario desde el token." });
             }
@@ -94,7 +101,7 @@ public class AuthController : ControllerBase
                 user = new Usuario
                 {
                     Oid = oid,
-                    Email = graphUser.Mail ?? User.FindFirst("email")?.Value ?? "unknown@example.com",
+                    Email = graphUser.Mail ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")?.Value ?? "unknown@example.com",
                     Nombre = graphUser.DisplayName ?? "Unknown",
                     DepartamentoId = departamento?.IdDepartamento,
                     CargoId = cargo?.IdCargo,
