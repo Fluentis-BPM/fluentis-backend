@@ -24,7 +24,7 @@ services:
       - sqlserver
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=tcp:fluentis.database.windows.net,1433;Initial Catalog=fluentis;Persist Security Info=False;User ID=sadmin;Password=ApiTestKey123!;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=pollocampero;User Id=sa;Password=ApiTestKey123!;TrustServerCertificate=True;
     ports:
       - "8080:80"
 
