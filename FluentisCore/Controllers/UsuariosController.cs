@@ -2,18 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentisCore.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Hosting;
+using FluentisCore.DTO;
 
 namespace FluentisCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [ConditionalAuthorize]
     public class UsuariosController : ControllerBase
     {
         private readonly FluentisContext _context;
@@ -25,18 +28,49 @@ namespace FluentisCore.Controllers
 
         // GET: api/Usuarios
         [HttpGet]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios()
+        public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetUsuarios()
         {
-            return await _context.Usuarios.ToListAsync();
+            return await _context.Usuarios
+                .Include(u => u.Departamento)
+                .Include(u => u.Rol)
+                .Include(u => u.Cargo)
+                .Select(u => new UsuarioDto
+                {
+                    IdUsuario = u.IdUsuario,
+                    Nombre = u.Nombre,
+                    Email = u.Email,
+                    Oid = u.Oid,
+                    DepartamentoId = u.DepartamentoId,
+                    DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                    RolId = u.RolId,
+                    RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                    CargoId = u.CargoId,
+                    CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                })
+                .ToListAsync();
         }
 
-        // GET: api/Usuarios/5
         [HttpGet("{id}")]
-        [Authorize]
-        public async Task<ActionResult<Usuario>> GetUsuario(int id)
+        public async Task<ActionResult<UsuarioDto>> GetUsuario(int id)
         {
-            var usuario = await _context.Usuarios.FindAsync(id);
+            var usuario = await _context.Usuarios
+                .Include(u => u.Departamento)
+                .Include(u => u.Rol)
+                .Include(u => u.Cargo)
+                .Select(u => new UsuarioDto
+                {
+                    IdUsuario = u.IdUsuario,
+                    Nombre = u.Nombre,
+                    Email = u.Email,
+                    Oid = u.Oid,
+                    DepartamentoId = u.DepartamentoId,
+                    DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                    RolId = u.RolId,
+                    RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                    CargoId = u.CargoId,
+                    CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                })
+                .FirstOrDefaultAsync(u => u.IdUsuario == id);
 
             if (usuario == null)
             {
@@ -49,7 +83,6 @@ namespace FluentisCore.Controllers
         // PUT: api/Usuarios/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        [Authorize]
         public async Task<IActionResult> PutUsuario(int id, Usuario usuario)
         {
             if (id != usuario.IdUsuario)
@@ -81,7 +114,6 @@ namespace FluentisCore.Controllers
         // POST: api/Usuarios
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        [Authorize]
         public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
         {
             _context.Usuarios.Add(usuario);
@@ -92,7 +124,6 @@ namespace FluentisCore.Controllers
 
         // DELETE: api/Usuarios/5
         [HttpDelete("{id}")]
-        [Authorize]
         public async Task<IActionResult> DeleteUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);

@@ -9,12 +9,13 @@ using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models.LoginRequestManagement;
 using FluentisCore.Models.UserManagement;
 using Microsoft.Graph.Models;
+using FluentisCore.Auth;
 
 namespace FluentisCore.Controllers{
 [ApiController]
 [Route("/[controller]")]
-[Authorize]
-public class AuthController : ControllerBase
+[ConditionalAuthorize]
+    public class AuthController : ControllerBase
 {
     private readonly FluentisContext _context;
     private readonly GraphServiceClient _graphClient;
@@ -26,7 +27,6 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    [Authorize]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         try
@@ -101,7 +101,7 @@ public class AuthController : ControllerBase
                 user = new Usuario
                 {
                     Oid = oid,
-                    Email = graphUser.Mail ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name")?.Value ?? "unknown@example.com",
+                    Email = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn")?.Value ?? "mierda no sirve",
                     Nombre = graphUser.DisplayName ?? "Unknown",
                     DepartamentoId = departamento?.IdDepartamento,
                     CargoId = cargo?.IdCargo,

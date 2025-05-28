@@ -8,12 +8,13 @@ using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
 using Microsoft.AspNetCore.Authorization;
+using FluentisCore.Auth;
 
 namespace FluentisCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [ConditionalAuthorize]
     public class CargosController : ControllerBase
     {
         private readonly FluentisContext _context;

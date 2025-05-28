@@ -14,10 +14,18 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        Console.WriteLine(builder.Configuration["Cors:AllowedOrigins"]);
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        if (builder.Environment.IsDevelopment())
+        {
+            Console.WriteLine("CORS configurado para desarrollo: Permitiendo cualquier origen, encabezado y método.");
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            Console.WriteLine("CORS configurado para producción: Permitiendo solo el origen específico de la aplicación frontend.");
+            policy.WithOrigins("http://localhost:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
     });
 });
 
@@ -30,6 +38,25 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             jwtOptions.TokenValidationParameters.RoleClaimType = "roles";
             jwtOptions.TokenValidationParameters.ValidateAudience = true;
             jwtOptions.TokenValidationParameters.ValidateIssuer = true;
+            // Accept multiple audiences
+            jwtOptions.TokenValidationParameters.ValidAudiences = new[]
+            {
+                builder.Configuration["AzureAd:Audience"], // https://asofarmabpm.onmicrosoft.com/...
+                $"api://{builder.Configuration["AzureAd:ClientId"]}" // api://badd1a2d-...
+            };
+            // Accept multiple issuers
+            jwtOptions.TokenValidationParameters.ValidIssuers = new[]
+            {
+                $"https://login.microsoftonline.com/{builder.Configuration["AzureAd:TenantId"]}/v2.0",
+                $"https://sts.windows.net/{builder.Configuration["AzureAd:TenantId"]}/"
+            };
+            // Map scope claim to "scp"
+            jwtOptions.TokenValidationParameters.NameClaimType = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
+            jwtOptions.TokenValidationParameters.RoleClaimType = "roles";
+            jwtOptions.TokenValidationParameters.ValidateLifetime = true;
+
+            Console.WriteLine($"[JwtBearer] Configured ValidAudiences: {string.Join(", ", jwtOptions.TokenValidationParameters.ValidAudiences)}");
+            Console.WriteLine($"[JwtBearer] Configured ValidIssuers: {string.Join(", ", jwtOptions.TokenValidationParameters.ValidIssuers)}");
         },
         identityOptions =>
         {
@@ -55,7 +82,6 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
     var clientSecret = configuration["AzureAd:ClientSecret"];
     var tenantId = configuration["AzureAd:TenantId"];
 
-    // Imprimir valores para depuración
     Console.WriteLine($"GraphServiceClient - TenantId: {tenantId}");
     Console.WriteLine($"GraphServiceClient - ClientId: {clientId}");
     Console.WriteLine($"GraphServiceClient - ClientSecret: {(string.IsNullOrEmpty(clientSecret) ? "VACÍO" : "CONFIGURADO")}");
@@ -85,8 +111,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowFrontend");
-// app.UseHttpsRedirection();
-app.UseAuthentication();
+app.UseAuthentication(); // Always enable authentication
 app.UseAuthorization();
 app.MapControllers();
 
@@ -104,7 +129,6 @@ using (var scope = app.Services.CreateScope())
         initDB.InsertCargosFromJson(jsonData);
         initDB.InsertRols();
         initDB.InsertDepartamentos();
-
     }
     else
     {

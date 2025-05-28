@@ -14,7 +14,7 @@ namespace FluentisCore.Models.UserManagement
         [StringLength(255)]
         public string Nombre { get; set; }
 
-        public ICollection<Usuario> Usuarios { get; set; }
+        public virtual ICollection<Usuario> Usuarios { get; set; }
     }
 
     public class Rol
