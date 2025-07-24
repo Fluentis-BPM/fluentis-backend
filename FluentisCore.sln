@@ -4,6 +4,8 @@ VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentisCore", "FluentisCore\FluentisCore.csproj", "{B8CE26BA-7E47-453C-8D9C-E074EE7841AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FluentisCore.Tests", "FluentisCore.Tests\FluentisCore.Tests.csproj", "{61EDD9B9-295B-460A-B497-302D6D553593}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +16,10 @@ Global
 		{B8CE26BA-7E47-453C-8D9C-E074EE7841AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8CE26BA-7E47-453C-8D9C-E074EE7841AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8CE26BA-7E47-453C-8D9C-E074EE7841AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61EDD9B9-295B-460A-B497-302D6D553593}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61EDD9B9-295B-460A-B497-302D6D553593}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61EDD9B9-295B-460A-B497-302D6D553593}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61EDD9B9-295B-460A-B497-302D6D553593}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

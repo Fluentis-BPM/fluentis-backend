@@ -148,4 +148,23 @@ namespace FluentisCore.Models.InputAndApprovalManagement
         [ForeignKey("UsuarioId")]
         public virtual Usuario Usuario { get; set; }
     }
+
+    public class RelacionVisualizador
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int IdRelacion { get; set; }
+
+        [Required]
+        public int FlujoActivoId { get; set; }
+
+        [ForeignKey("FlujoActivoId")]
+        public virtual FlujoActivo FlujoActivo { get; set; }
+
+        [Required]
+        public int UsuarioId { get; set; }
+
+        [ForeignKey("UsuarioId")]
+        public virtual Usuario Usuario { get; set; }
+    }
 }
