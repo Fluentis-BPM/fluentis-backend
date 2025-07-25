@@ -138,6 +138,24 @@ namespace FluentisCore.Models
             });
 
             // ----------------------------------------------------------
+            // Fix for RelacionDecisionUsuario
+            // ----------------------------------------------------------
+            modelBuilder.Entity<RelacionDecisionUsuario>()
+                    .HasOne(rdu => rdu.RelacionGrupoAprobacion)
+                    .WithMany(rga => rga.Decisiones)
+                    .HasForeignKey(rdu => rdu.RelacionGrupoAprobacionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+            // ----------------------------------------------------------
+            // Fix for RelacionInput
+            // ----------------------------------------------------------
+            modelBuilder.Entity<RelacionInput>()
+                .HasOne(ri => ri.Solicitud)
+                .WithMany(s => s.Inputs)
+                .HasForeignKey(ri => ri.SolicitudId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ----------------------------------------------------------
             // Fix for Votos
             // ----------------------------------------------------------
             modelBuilder.Entity<Voto>(entity =>
