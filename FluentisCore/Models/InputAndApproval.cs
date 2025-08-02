@@ -85,6 +85,9 @@ namespace FluentisCore.Models.InputAndApprovalManagement
 
         [ForeignKey("SolicitudId")]
         public virtual Solicitud Solicitud { get; set; }
+
+        public virtual ICollection<RelacionDecisionUsuario> Decisiones { get; set; }
+
     }
 
     public class RelacionDecisionUsuario

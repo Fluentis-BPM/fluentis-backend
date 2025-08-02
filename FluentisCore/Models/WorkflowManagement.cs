@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.UserManagement;
 
 namespace FluentisCore.Models.WorkflowManagement
@@ -103,7 +104,13 @@ namespace FluentisCore.Models.WorkflowManagement
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTime FechaCreacion { get; set; }
 
-        public EstadoSolicitud Estado { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string Estado { get; set; } = "pendiente";
+
+        public virtual ICollection<RelacionInput> Inputs { get; set; }
+        public virtual ICollection<RelacionGrupoAprobacion> GruposAprobacion { get; set; }
+
     }
 
     public class FlujoActivo
