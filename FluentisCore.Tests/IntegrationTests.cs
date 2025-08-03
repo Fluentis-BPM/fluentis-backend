@@ -104,7 +104,7 @@ public class IntegrationTests : PlaywrightTest
         var response = await apiContext.GetAsync("/api/usuarios");
 
         // 3. Assert: Verificar que la respuesta es exitosa y contiene datos.
-        Assert.True(response.Ok, $"La solicitud fall� con el estado: {response.Status}");
+        Assert.True(response.Ok, $"La solicitud falló con el estado: {response.Status}");
         var jsonResponse = await response.JsonAsync();
         Assert.NotNull(jsonResponse);
         // Verifica que la respuesta es un array (una lista).
@@ -161,7 +161,7 @@ public class IntegrationTests : PlaywrightTest
         if (!response.Ok)
         {
             var responseBody = await response.TextAsync();
-            Assert.True(response.Ok, $"La creaci�n del usuario fall� con el estado: {response.Status}. Cuerpo: {responseBody}");
+            Assert.True(response.Ok, $"La creación del usuario falló con el estado: {response.Status}. Cuerpo: {responseBody}");
         }
         Assert.Equal(201, response.Status); // 201 Created
 
@@ -184,13 +184,13 @@ public class IntegrationTests : PlaywrightTest
         // (Ajusta la ruta '/api/Rols' si es diferente en tu API)
         var response = await apiContext.GetAsync("/api/Rols");
 
-        // 3. Assert: Verificar que la respuesta es exitosa y no est� vac�a.
-        Assert.True(response.Ok, $"La solicitud de roles fall� con el estado: {response.Status}");
+        // 3. Assert: Verificar que la respuesta es exitosa y no está vacía.
+        Assert.True(response.Ok, $"La solicitud de roles falló con el estado: {response.Status}");
         var jsonResponse = await response.JsonAsync();
         Assert.NotNull(jsonResponse);
         Assert.Equal(JsonValueKind.Array, jsonResponse.Value.ValueKind);
         // Opcional: verificar que la lista contiene al menos un rol.
-        Assert.True(jsonResponse.Value.GetArrayLength() > 0, "La lista de roles no deber�a estar vac�a.");
+        Assert.True(jsonResponse.Value.GetArrayLength() > 0, "La lista de roles no debería estar vacía.");
     }
 
     /// <summary>
