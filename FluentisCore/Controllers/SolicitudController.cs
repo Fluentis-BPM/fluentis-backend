@@ -8,12 +8,13 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using FluentisCore.DTO;
+using FluentisCore.Auth;
 
 namespace FluentisCore.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "RequireAccessAsUser")] // Requiere autenticación y scope adecuado
+    [ConditionalAuthorize] // Changed from custom policy to same as other controllers
     public class SolicitudesController : ControllerBase
     {
         private readonly FluentisContext _context;
@@ -70,7 +71,8 @@ namespace FluentisCore.Controllers
             var solicitud = new Solicitud
             {
                 SolicitanteId = solicitudDto.SolicitanteId,
-                FlujoBaseId = solicitudDto.FlujoBaseId
+                FlujoBaseId = solicitudDto.FlujoBaseId,
+                FechaCreacion = DateTime.Now
             };
 
             // Agregar inputs
@@ -107,13 +109,19 @@ namespace FluentisCore.Controllers
             await _context.SaveChangesAsync();
 
             // Actualizar relaciones con el IdSolicitud generado
-            foreach (var input in solicitud.Inputs)
+            if (solicitud.Inputs != null)
             {
-                input.SolicitudId = solicitud.IdSolicitud;
+                foreach (var input in solicitud.Inputs)
+                {
+                    input.SolicitudId = solicitud.IdSolicitud;
+                }
             }
-            foreach (var grupo in solicitud.GruposAprobacion)
+            if (solicitud.GruposAprobacion != null)
             {
-                grupo.SolicitudId = solicitud.IdSolicitud;
+                foreach (var grupo in solicitud.GruposAprobacion)
+                {
+                    grupo.SolicitudId = solicitud.IdSolicitud;
+                }
             }
 
             await _context.SaveChangesAsync();

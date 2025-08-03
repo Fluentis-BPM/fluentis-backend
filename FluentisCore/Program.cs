@@ -71,7 +71,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAccessAsUser", policy =>
-        policy.RequireClaim("scp", "access_as_user"));
+        policy.RequireAuthenticatedUser());
 });
 
 // Configura Microsoft Graph
