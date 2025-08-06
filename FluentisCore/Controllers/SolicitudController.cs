@@ -292,20 +292,28 @@ namespace FluentisCore.Controllers
             _context.DecisionesUsuario.Add(decision);
             await _context.SaveChangesAsync();
 
+            // Obtener todos los usuarios del grupo de aprobación
+            var usuariosGrupo = await _context.RelacionesUsuarioGrupo
+                .Where(rug => rug.GrupoAprobacionId == grupoAprobacion.GrupoAprobacionId)
+                .Select(rug => rug.UsuarioId)
+                .ToListAsync();
+            var decisiones = grupoAprobacion.Decisiones.Select(d => d.IdUsuario).ToList();
+            bool todosVotaron = usuariosGrupo.All(uid => decisiones.Contains(uid));
+
             // Actualizar estado basado en todas las decisiones
             bool todasAprobadas = true;
             bool algunaRechazada = false;
 
             foreach (var ga in solicitud.GruposAprobacion)
             {
-                var decisiones = ga.Decisiones;
-                if (decisiones.Any())
+                var decisionesGrupo = ga.Decisiones;
+                if (decisionesGrupo.Any())
                 {
-                    if (!decisiones.All(d => d.Decision == true))
+                    if (!decisionesGrupo.All(d => d.Decision == true))
                     {
                         todasAprobadas = false;
                     }
-                    if (decisiones.Any(d => d.Decision == false))
+                    if (decisionesGrupo.Any(d => d.Decision == false))
                     {
                         algunaRechazada = true;
                         break;
@@ -317,18 +325,35 @@ namespace FluentisCore.Controllers
                 }
             }
 
-            if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
+            if (todosVotaron)
             {
-                solicitud.Estado = EstadoSolicitud.Aprobado;
-            }
-            else if (algunaRechazada)
-            {
-                solicitud.Estado = EstadoSolicitud.Rechazado;
+                if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
+                {
+                    solicitud.Estado = EstadoSolicitud.Aprobado;
+                    if (solicitud.FlujoBaseId == null)
+                    {
+                        var flujoActivo = new FlujoActivo
+                        {
+                            SolicitudId = solicitud.IdSolicitud,
+                            Nombre = solicitud.Nombre,
+                            Descripcion = solicitud.Descripcion,
+                            VersionActual = 1,
+                            FlujoEjecucionId = 0, // Temporal, ajusta según lógica
+                            Estado = EstadoFlujoActivo.EnCurso
+                        };
+                        _context.FlujosActivos.Add(flujoActivo);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                else if (algunaRechazada)
+                {
+                    solicitud.Estado = EstadoSolicitud.Rechazado;
+                }
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { DecisionId = decision.IdRelacion, EstadoActual = solicitud.Estado });
+            return Ok(new { DecisionId = decision.IdRelacion, EstadoActual = solicitud.Estado, TodosVotaron = todosVotaron });
         }
 
         // PUT: api/solicitudes/{id}/inputs/{inputId}
