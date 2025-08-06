@@ -74,7 +74,7 @@ namespace FluentisCore.Controllers
                 FlujoBaseId = solicitudDto.FlujoBaseId,
                 Nombre = solicitudDto.Nombre,
                 Descripcion = solicitudDto.Descripcion,
-                Estado = EstadoSolicitud.Pendiente
+                Estado = EstadoSolicitud.Pendiente,
                 FechaCreacion = DateTime.Now
             };
 
