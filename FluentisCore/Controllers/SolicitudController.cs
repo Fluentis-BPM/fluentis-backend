@@ -70,10 +70,13 @@ namespace FluentisCore.Controllers
             var solicitud = new Solicitud
             {
                 SolicitanteId = solicitudDto.SolicitanteId,
-                FlujoBaseId = solicitudDto.FlujoBaseId
+                FlujoBaseId = solicitudDto.FlujoBaseId,
+                Nombre = solicitudDto.Nombre,
+                Descripcion = solicitudDto.Descripcion,
+                Estado = EstadoSolicitud.Pendiente
             };
 
-            // Agregar inputs
+            // Agregar inputs (pueden estar vacíos inicialmente)
             if (solicitudDto.Inputs != null)
             {
                 solicitud.Inputs = new List<RelacionInput>();
@@ -82,7 +85,9 @@ namespace FluentisCore.Controllers
                     var input = new RelacionInput
                     {
                         InputId = inputDto.InputId,
-                        Valor = inputDto.Valor,
+                        Nombre = inputDto.Nombre,
+                        PlaceHolder = inputDto.PlaceHolder,
+                        Valor = inputDto.Valor, // Puede ser null o vacío
                         Requerido = inputDto.Requerido ?? false,
                         SolicitudId = solicitud.IdSolicitud // Se asignará después de guardar
                     };
@@ -168,14 +173,17 @@ namespace FluentisCore.Controllers
 
             if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
             {
-                solicitud.Estado = "aprobado";
+                solicitud.Estado = EstadoSolicitud.Aprobado;
             }
             else if (algunaRechazada)
             {
-                solicitud.Estado = "rechazado";
+                solicitud.Estado = EstadoSolicitud.Rechazado;
+            }
+            else
+            {
+                solicitud.Estado = solicitudDto.Estado; // Permite cambiar manualmente si no hay decisiones completas
             }
 
-            solicitud.Estado = solicitudDto.Estado ?? solicitud.Estado; // Sobrescribe si se especifica
             _context.Entry(solicitud).State = EntityState.Modified;
 
             try
@@ -210,7 +218,9 @@ namespace FluentisCore.Controllers
             var input = new RelacionInput
             {
                 InputId = inputDto.InputId,
-                Valor = inputDto.Valor,
+                Nombre = inputDto.Nombre,
+                PlaceHolder = inputDto.PlaceHolder,
+                Valor = inputDto.Valor, // Puede ser null o vacío
                 Requerido = inputDto.Requerido ?? false,
                 SolicitudId = id
             };
@@ -301,11 +311,11 @@ namespace FluentisCore.Controllers
 
             if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
             {
-                solicitud.Estado = "aprobado";
+                solicitud.Estado = EstadoSolicitud.Aprobado;
             }
             else if (algunaRechazada)
             {
-                solicitud.Estado = "rechazado";
+                solicitud.Estado = EstadoSolicitud.Rechazado;
             }
 
             await _context.SaveChangesAsync();
@@ -313,10 +323,60 @@ namespace FluentisCore.Controllers
             return Ok(new { DecisionId = decision.IdRelacion, EstadoActual = solicitud.Estado });
         }
 
+        // PUT: api/solicitudes/{id}/inputs/{inputId}
+        [HttpPut("{id}/inputs/{inputId}")]
+        public async Task<IActionResult> UpdateInputInSolicitud(int id, int inputId, [FromBody] RelacionInputUpdateDto inputDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var solicitud = await _context.Solicitudes.FindAsync(id);
+            if (solicitud == null)
+            {
+                return NotFound("Solicitud no encontrada.");
+            }
+
+            var input = await _context.RelacionesInput
+                .FirstOrDefaultAsync(ri => ri.SolicitudId == id && ri.IdRelacion == inputId);
+            if (input == null)
+            {
+                return NotFound("Input no encontrado.");
+            }
+
+            // Actualizar solo los campos proporcionados, manteniendo los existentes si no se envían
+            if (inputDto.Valor != null) input.Valor = inputDto.Valor; // Distingue entre null (no enviado) y "" (vacío)
+            if (inputDto.PlaceHolder != null) input.PlaceHolder = inputDto.PlaceHolder;
+            if (inputDto.Nombre != null) input.Nombre = inputDto.Nombre; // Nuevo: permite modificar Nombre
+            if (inputDto.Requerido.HasValue) input.Requerido = inputDto.Requerido.Value;
+
+            _context.Entry(input).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SolicitudExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
         private bool SolicitudExists(int id)
         {
             return _context.Solicitudes.Any(e => e.IdSolicitud == id);
         }
     }
-
+    
+    
 }

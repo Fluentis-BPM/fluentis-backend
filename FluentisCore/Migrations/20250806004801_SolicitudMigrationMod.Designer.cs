@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250806004801_SolicitudMigrationMod")]
+    partial class SolicitudMigrationMod
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -299,18 +302,8 @@ namespace FluentisCore.Migrations
                     b.Property<int>("InputId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<int?>("PasoSolicitudId")
                         .HasColumnType("int");
-
-                    b.Property<string>("PlaceHolder")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
 
                     b.Property<bool>("Requerido")
                         .HasColumnType("bit");
@@ -320,7 +313,8 @@ namespace FluentisCore.Migrations
 
                     b.Property<string>("Valor")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.HasKey("IdRelacion");
 
@@ -732,10 +726,6 @@ namespace FluentisCore.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdFlujoActivo"));
 
-                    b.Property<string>("Descripcion")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
@@ -749,15 +739,7 @@ namespace FluentisCore.Migrations
                     b.Property<int>("FlujoEjecucionId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<int>("SolicitudId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VersionActual")
                         .HasColumnType("int");
 
                     b.HasKey("IdFlujoActivo");
@@ -903,12 +885,10 @@ namespace FluentisCore.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSolicitud"));
 
-                    b.Property<string>("Descripcion")
+                    b.Property<string>("Estado")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Estado")
-                        .HasColumnType("int");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("FechaCreacion")
                         .ValueGeneratedOnAddOrUpdate()
@@ -916,11 +896,6 @@ namespace FluentisCore.Migrations
 
                     b.Property<int?>("FlujoBaseId")
                         .HasColumnType("int");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
 
                     b.Property<int>("SolicitanteId")
                         .HasColumnType("int");
