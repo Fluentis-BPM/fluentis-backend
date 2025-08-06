@@ -114,8 +114,23 @@ namespace FluentisCore.Controllers
         // POST: api/Usuarios
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
+        public async Task<ActionResult<Usuario>> PostUsuario(UsuarioCreateDto usuarioDto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var usuario = new Usuario
+            {
+                Nombre = usuarioDto.Nombre,
+                Email = usuarioDto.Email,
+                Oid = usuarioDto.Oid,
+                DepartamentoId = usuarioDto.DepartamentoId,
+                CargoId = usuarioDto.CargoId,
+                RolId = usuarioDto.RolId
+            };
+
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 

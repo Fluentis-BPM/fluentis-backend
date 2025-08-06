@@ -107,8 +107,7 @@ namespace FluentisCore.Models.WorkflowManagement
         [ForeignKey("SolicitanteId")]
         public virtual Usuario Solicitante { get; set; }
 
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         [Required]
         public EstadoSolicitud Estado { get; set; } = EstadoSolicitud.Pendiente;
