@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250806021138_SolicitudModMigration")]
+    partial class SolicitudModMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -908,7 +911,6 @@ namespace FluentisCore.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Estado")
-                        .IsRequired()
                         .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")

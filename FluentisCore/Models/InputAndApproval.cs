@@ -33,8 +33,14 @@ namespace FluentisCore.Models.InputAndApprovalManagement
         [ForeignKey("InputId")]
         public virtual Inputs Input { get; set; }
 
+        [Required]
         [StringLength(255)]
+        public string Nombre { get; set; }
+
         public string Valor { get; set; }
+
+        [StringLength(255)]
+        public string PlaceHolder { get; set; }
 
         public bool Requerido { get; set; }
 

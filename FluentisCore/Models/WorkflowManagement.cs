@@ -10,7 +10,7 @@ namespace FluentisCore.Models.WorkflowManagement
     public enum TipoFlujo { Normal, Bifurcacion, Union }
     public enum TipoPaso { Ejecucion, Aprobacion }
     public enum ReglaAprobacion { Unanime, Individual, Ancla }
-    public enum EstadoSolicitud { Aprobado, Rechazado }
+    public enum EstadoSolicitud { Aprobado, Pendiente, Rechazado }
     public enum EstadoFlujoActivo { EnCurso, Finalizado, Cancelado }
     public enum EstadoPasoSolicitud { Aprobado, Rechazado, Excepcion }
 
@@ -26,7 +26,7 @@ namespace FluentisCore.Models.WorkflowManagement
 
         public string Descripcion { get; set; }
 
-        public int? VersionActual { get; set; }
+        public int? VersionActual { get; set; } = 1;
 
         public bool EsPlantilla { get; set; }
 
@@ -93,6 +93,12 @@ namespace FluentisCore.Models.WorkflowManagement
 
         public int? FlujoBaseId { get; set; }
 
+        [Required]
+        [StringLength(255)]
+        public string Nombre { get; set; }
+
+        public string Descripcion { get; set; }
+
         [ForeignKey("FlujoBaseId")]
         public virtual FlujoAprobacion FlujoBase { get; set; }
 
@@ -104,8 +110,7 @@ namespace FluentisCore.Models.WorkflowManagement
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         [Required]
-        [StringLength(50)]
-        public string Estado { get; set; } = "pendiente";
+        public EstadoSolicitud Estado { get; set; } = EstadoSolicitud.Pendiente;
 
         public virtual ICollection<RelacionInput> Inputs { get; set; }
         public virtual ICollection<RelacionGrupoAprobacion> GruposAprobacion { get; set; }
@@ -122,6 +127,15 @@ namespace FluentisCore.Models.WorkflowManagement
 
         [ForeignKey("SolicitudId")]
         public virtual Solicitud Solicitud { get; set; }
+
+        [Required]
+        [StringLength(255)]
+        public string Nombre { get; set; }
+
+        public string Descripcion { get; set; }
+
+        [Required]
+        public int VersionActual { get; set; } = 1;
 
         public int FlujoEjecucionId { get; set; }
 
