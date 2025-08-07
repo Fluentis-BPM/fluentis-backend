@@ -68,6 +68,10 @@ namespace FluentisCore.Models.InputAndApprovalManagement
         public DateTime Fecha { get; set; }
 
         public bool EsGlobal { get; set; }
+
+        public virtual ICollection<RelacionUsuarioGrupo> RelacionesUsuarioGrupo { get; set; }
+
+        
     }
 
     public class RelacionGrupoAprobacion
@@ -113,6 +117,8 @@ namespace FluentisCore.Models.InputAndApprovalManagement
         public virtual RelacionGrupoAprobacion RelacionGrupoAprobacion { get; set; }
 
         public bool? Decision { get; set; }
+
+        public DateTime FechaDecision { get; set; }
     }
 
     public class Delegacion
