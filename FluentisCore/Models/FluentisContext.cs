@@ -196,7 +196,31 @@ namespace FluentisCore.Models
                     .IsRequired(false) //
                     .OnDelete(DeleteBehavior.NoAction);// deshabilita cascada :contentReference[oaicite:1]{index=1}
             });
-            // Other configurations...
+            
+
+            // Nuevas configuraciones para PasoSolicitud
+            modelBuilder.Entity<PasoSolicitud>(entity =>
+            {
+                entity.HasMany(p => p.RelacionesInput)
+                    .WithOne(ri => ri.PasoSolicitud)
+                    .HasForeignKey(ri => ri.PasoSolicitudId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(p => p.RelacionesGrupoAprobacion)
+                    .WithOne(rga => rga.PasoSolicitud)
+                    .HasForeignKey<RelacionGrupoAprobacion>(rga => rga.PasoSolicitudId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(p => p.Comentarios)
+                    .WithOne(c => c.PasoSolicitud)
+                    .HasForeignKey(c => c.PasoSolicitudId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(p => p.Excepciones)
+                    .WithOne(e => e.PasoSolicitud)
+                    .HasForeignKey(e => e.PasoSolicitudId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
         public DbSet<FluentisCore.Models.UserManagement.Cargo> Cargo { get; set; } = default!;
     }

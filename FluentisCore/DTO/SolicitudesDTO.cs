@@ -55,7 +55,9 @@ namespace FluentisCore.DTO
     }
 
     public class RelacionInputUpdateDto
-    {
+    {   
+        public int? InputId { get; set; }
+        public int? IdRelacion { get; set; }
         public string Valor { get; set; }
         [StringLength(255)]
         public string PlaceHolder { get; set; }

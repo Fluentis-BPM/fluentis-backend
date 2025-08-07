@@ -2,17 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.InputAndApprovalManagement;
+using FluentisCore.Models.MetricsAndReportsManagement;
 using FluentisCore.Models.UserManagement;
 
 namespace FluentisCore.Models.WorkflowManagement
 {
     public enum TipoFlujo { Normal, Bifurcacion, Union }
     public enum TipoPaso { Ejecucion, Aprobacion }
-    public enum ReglaAprobacion { Unanime, Individual, Ancla }
+    public enum ReglaAprobacion { Unanimidad, PrimeraAprobacion, Mayoria }
     public enum EstadoSolicitud { Aprobado, Pendiente, Rechazado }
     public enum EstadoFlujoActivo { EnCurso, Finalizado, Cancelado }
-    public enum EstadoPasoSolicitud { Aprobado, Rechazado, Excepcion }
+    public enum EstadoPasoSolicitud { Aprobado, Rechazado, Excepcion, Pendiente, Entregado, Cancelado }
 
     public class FlujoAprobacion
     {
@@ -166,7 +168,7 @@ namespace FluentisCore.Models.WorkflowManagement
         [ForeignKey("PasoId")]
         public virtual PasoFlujo PasoFlujo { get; set; }
 
-        public int CaminoId { get; set; }
+        public int? CaminoId { get; set; }
 
         [ForeignKey("CaminoId")]
         public virtual CaminoParalelo CaminoParalelo { get; set; }
@@ -184,6 +186,7 @@ namespace FluentisCore.Models.WorkflowManagement
         [Required]
         public TipoPaso TipoPaso { get; set; }
 
+        [Required]
         public EstadoPasoSolicitud Estado { get; set; }
 
         [StringLength(255)]
@@ -192,7 +195,18 @@ namespace FluentisCore.Models.WorkflowManagement
         [Required]
         public TipoFlujo TipoFlujo { get; set; }
 
-        [Required]
-        public ReglaAprobacion ReglaAprobacion { get; set; }
+        public ReglaAprobacion? ReglaAprobacion { get; set; } // <-- Cambia a nullable si quieres aceptar nulos
+
+        public virtual ICollection<RelacionInput> RelacionesInput { get; set; }
+        public virtual RelacionGrupoAprobacion RelacionesGrupoAprobacion { get; set; }
+        public virtual ICollection<Comentario> Comentarios { get; set; }
+        public virtual ICollection<Excepcion> Excepciones { get; set; }
+        
+        public PasoSolicitud()
+        {
+            RelacionesInput = new List<RelacionInput>();
+            Comentarios = new List<Comentario>();
+            Excepciones = new List<Excepcion>();
+        }
     }
 }
