@@ -114,9 +114,9 @@ namespace FluentisCore.Controllers
                         {
                             InputId = inputDto.InputId,
                             Nombre = inputDto.Nombre,
-                            Valor = inputDto.Valor,
+                            Valor = inputDto.Valor?.RawValue,
                             PlaceHolder = inputDto.PlaceHolder,
-                            Requerido = inputDto.Requerido ?? false,
+                            Requerido = inputDto.Requerido,
                             PasoSolicitudId = paso.IdPasoSolicitud
                         };
                         _context.RelacionesInput.Add(relacion);
@@ -219,9 +219,9 @@ namespace FluentisCore.Controllers
             {
                 InputId = dto.InputId,
                 Nombre = dto.Nombre,
-                Valor = dto.Valor,
+                Valor = dto.Valor?.RawValue,
                 PlaceHolder = dto.PlaceHolder,
-                Requerido = dto.Requerido ?? false,
+                Requerido = dto.Requerido,
                 PasoSolicitudId = id
             };
             _context.RelacionesInput.Add(relacion);
@@ -246,7 +246,7 @@ namespace FluentisCore.Controllers
                 return NotFound("Relación de input no encontrada.");
             }
 
-            relacion.Valor = dto.Valor ?? relacion.Valor;
+            relacion.Valor = dto.Valor.RawValue ?? relacion.Valor;
             relacion.PlaceHolder = dto.PlaceHolder ?? relacion.PlaceHolder;
             if (dto.Requerido.HasValue) relacion.Requerido = dto.Requerido.Value;
             relacion.Nombre = dto.Nombre ?? relacion.Nombre;

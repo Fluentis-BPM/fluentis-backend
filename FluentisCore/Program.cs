@@ -129,6 +129,15 @@ using (var scope = app.Services.CreateScope())
         initDB.InsertCargosFromJson(jsonData);
         initDB.InsertRols();
         initDB.InsertDepartamentos();
+        initDB.InsertMockUsers(); // Insert mock users with relationships
+        initDB.InsertMockApprovalGroups(); // Insert approval groups
+        initDB.InsertMockUserGroupRelations(); // Link users to approval groups
+        initDB.InsertMockInputs(); // Insert input types
+        initDB.InsertMockWorkflows(); // Insert sample workflows
+        Console.WriteLine("✅ Base de datos inicializada con datos de prueba completos");
+        Console.WriteLine("👥 Usuarios creados con relaciones a departamentos, roles y cargos");
+        Console.WriteLine("🔄 Flujos de aprobación y grupos configurados");
+        Console.WriteLine("📋 Tipos de inputs configurados");
     }
     else
     {

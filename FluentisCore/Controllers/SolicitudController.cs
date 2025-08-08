@@ -89,8 +89,8 @@ namespace FluentisCore.Controllers
                         InputId = inputDto.InputId,
                         Nombre = inputDto.Nombre,
                         PlaceHolder = inputDto.PlaceHolder,
-                        Valor = inputDto.Valor, // Puede ser null o vacío
-                        Requerido = inputDto.Requerido ?? false,
+                        Valor = inputDto.Valor?.RawValue, // Puede ser null o vacío
+                        Requerido = inputDto.Requerido,
                         SolicitudId = solicitud.IdSolicitud // Se asignará después de guardar
                     };
                     solicitud.Inputs.Add(input);
@@ -228,8 +228,8 @@ namespace FluentisCore.Controllers
                 InputId = inputDto.InputId,
                 Nombre = inputDto.Nombre,
                 PlaceHolder = inputDto.PlaceHolder,
-                Valor = inputDto.Valor, // Puede ser null o vacío
-                Requerido = inputDto.Requerido ?? false,
+                Valor = inputDto.Valor?.RawValue, // Puede ser null o vacío
+                Requerido = inputDto.Requerido,
                 SolicitudId = id
             };
 
@@ -379,7 +379,7 @@ namespace FluentisCore.Controllers
             }
 
             // Actualizar solo los campos proporcionados, manteniendo los existentes si no se envían
-            if (inputDto.Valor != null) input.Valor = inputDto.Valor; // Distingue entre null (no enviado) y "" (vacío)
+            if (inputDto.Valor != null) input.Valor = inputDto.Valor.RawValue; // Distingue entre null (no enviado) y "" (vacío)
             if (inputDto.PlaceHolder != null) input.PlaceHolder = inputDto.PlaceHolder;
             if (inputDto.Nombre != null) input.Nombre = inputDto.Nombre; // Nuevo: permite modificar Nombre
             if (inputDto.Requerido.HasValue) input.Requerido = inputDto.Requerido.Value;

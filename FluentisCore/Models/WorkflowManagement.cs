@@ -32,8 +32,7 @@ namespace FluentisCore.Models.WorkflowManagement
 
         public bool EsPlantilla { get; set; }
 
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         public int CreadoPor { get; set; }
 
