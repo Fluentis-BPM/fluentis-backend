@@ -98,6 +98,9 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    // Uniformizar convenciones de nombres a camelCase para el frontend
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    options.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<FluentisContext>(opt =>
