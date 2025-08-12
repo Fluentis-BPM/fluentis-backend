@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.WorkflowManagement;
+using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
@@ -15,10 +16,38 @@ namespace FluentisCore.Controllers
     public class FlujosActivosController : ControllerBase
     {
         private readonly FluentisContext _context;
+        private readonly IWorkflowService _workflowService;
 
-        public FlujosActivosController(FluentisContext context)
+        public FlujosActivosController(FluentisContext context, IWorkflowService workflowService)
         {
             _context = context;
+            _workflowService = workflowService;
+        }
+
+        // GET: api/FlujosActivos/pasos/{id}
+        [HttpGet("Pasos/{id}")]
+        public async Task<ActionResult<IEnumerable<PasoSolicitud>>> GetPasoSolicitudesByFlujoActivo(int flujoActivoId)
+        {
+            var flujoActivo = await _context.FlujosActivos.FindAsync(flujoActivoId);
+            if (flujoActivo == null)
+            {
+                return NotFound("Flujo activo no encontrado.");
+            }
+
+            var pasos = await _context.PasosSolicitud
+                .Include(p => p.RelacionesInput)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                .Include(p => p.Comentarios)
+                .Include(p => p.Excepciones)
+                .Where(p => p.FlujoActivoId == flujoActivoId)
+                .ToListAsync();
+
+            foreach (var paso in pasos)
+            {
+                paso.TipoFlujo = await _workflowService.GetTipoFlujo(paso.IdPasoSolicitud, _context);
+            }
+
+            return pasos;
         }
 
         // GET: api/FlujosActivos

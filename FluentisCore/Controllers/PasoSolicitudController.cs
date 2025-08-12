@@ -25,32 +25,6 @@ namespace FluentisCore.Controllers
             _context = context;
         }
 
-        // GET: api/pasosolicitudes/flujoactivo/{flujoActivoId}
-        [HttpGet("flujoactivo/{flujoActivoId}")]
-        public async Task<ActionResult<IEnumerable<PasoSolicitud>>> GetPasoSolicitudesByFlujoActivo(int flujoActivoId)
-        {
-            var flujoActivo = await _context.FlujosActivos.FindAsync(flujoActivoId);
-            if (flujoActivo == null)
-            {
-                return NotFound("Flujo activo no encontrado.");
-            }
-
-            var pasos = await _context.PasosSolicitud
-                .Include(p => p.RelacionesInput)
-                .Include(p => p.RelacionesGrupoAprobacion)
-                .Include(p => p.Comentarios)
-                .Include(p => p.Excepciones)
-                .Where(p => p.FlujoActivoId == flujoActivoId)
-                .ToListAsync();
-
-            foreach (var paso in pasos)
-            {
-                paso.TipoFlujo = await GetTipoFlujo(paso.IdPasoSolicitud);
-            }
-
-            return pasos;
-        }
-
         // POST: api/pasosolicitudes
         [HttpPost]
         public async Task<ActionResult<PasoSolicitud>> CreatePasoSolicitud([FromBody] PasoSolicitudCreateDto dto)
