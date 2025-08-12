@@ -132,9 +132,14 @@ namespace FluentisCore.Models
             modelBuilder.Entity<RelacionUsuarioGrupo>(entity =>
             {
                 entity.HasOne(rug => rug.GrupoAprobacion)
-                    .WithMany()
+                    .WithMany(g => g.RelacionesUsuarioGrupo)
                     .HasForeignKey(rug => rug.GrupoAprobacionId)
-                    .OnDelete(DeleteBehavior.NoAction); // 🔴 Disable cascade
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(rug => rug.Usuario)
+                    .WithMany()
+                    .HasForeignKey(rug => rug.UsuarioId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ----------------------------------------------------------

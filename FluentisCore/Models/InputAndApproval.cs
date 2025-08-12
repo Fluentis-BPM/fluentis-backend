@@ -69,7 +69,7 @@ namespace FluentisCore.Models.InputAndApprovalManagement
 
         public bool EsGlobal { get; set; }
 
-        public virtual ICollection<RelacionUsuarioGrupo> RelacionesUsuarioGrupo { get; set; }
+        public virtual ICollection<RelacionUsuarioGrupo> RelacionesUsuarioGrupo { get; set; } = new List<RelacionUsuarioGrupo>();
 
         
     }
