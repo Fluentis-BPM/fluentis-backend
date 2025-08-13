@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using Azure.Identity;
 using Microsoft.Graph;
 using FluentisCore.Modules.DBInit;
+using FluentisCore.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -73,6 +74,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireAccessAsUser", policy =>
         policy.RequireAuthenticatedUser());
 });
+
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+
 
 // Configura Microsoft Graph
 builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
