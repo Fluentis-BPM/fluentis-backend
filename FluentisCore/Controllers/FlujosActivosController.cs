@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.WorkflowManagement;
+using FluentisCore.DTO;
+using FluentisCore.Extensions;
 using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
@@ -24,9 +26,9 @@ namespace FluentisCore.Controllers
             _workflowService = workflowService;
         }
 
-        // GET: api/FlujosActivos/pasos/{id}
-        [HttpGet("Pasos/{id}")]
-        public async Task<ActionResult<IEnumerable<PasoSolicitud>>> GetPasoSolicitudesByFlujoActivo(int flujoActivoId)
+        // GET: api/FlujosActivos/pasos/{flujoActivoId}
+        [HttpGet("Pasos/{flujoActivoId}")]
+        public async Task<ActionResult<FlujoActivoResponseDto>> GetPasoSolicitudesByFlujoActivo(int flujoActivoId)
         {
             var flujoActivo = await _context.FlujosActivos.FindAsync(flujoActivoId);
             if (flujoActivo == null)
@@ -47,70 +49,75 @@ namespace FluentisCore.Controllers
                 paso.TipoFlujo = await _workflowService.GetTipoFlujo(paso.IdPasoSolicitud, _context);
             }
 
-            return pasos;
+            var caminos = await _context.CaminosParalelos
+                .Where(c => pasos.Select(p => p.PasoId).Contains(c.PasoOrigenId)
+                          || pasos.Select(p => p.PasoId).Contains(c.PasoDestinoId))
+                .ToListAsync();
+
+            var response = new FlujoActivoResponseDto
+            {
+                FlujoActivoId = flujoActivoId,
+                Pasos = pasos.Select(p => p.ToFrontendDto()).ToList(),
+                Caminos = caminos.Select(c => c.ToFrontendDto()).ToList()
+            };
+
+            return response;
         }
 
         // GET: api/FlujosActivos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<FlujoActivo>>> GetFlujosActivos()
+        public async Task<ActionResult<IEnumerable<FlujoActivoFrontendDto>>> GetFlujosActivos()
         {
-            return await _context.FlujosActivos.ToListAsync();
+            var list = await _context.FlujosActivos
+                .Include(f => f.FlujoEjecucion)
+                .Include(f => f.Solicitud)
+                .ToListAsync();
+            return list.Select(f => f.ToFrontendDto()).ToList();
         }
 
         // GET: api/FlujosActivos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<FlujoActivo>> GetFlujoActivo(int id)
+        public async Task<ActionResult<FlujoActivoFrontendDto>> GetFlujoActivo(int id)
         {
-            var flujoActivo = await _context.FlujosActivos.FindAsync(id);
-
-            if (flujoActivo == null)
-            {
-                return NotFound();
-            }
-
-            return flujoActivo;
+            var flujoActivo = await _context.FlujosActivos
+                .Include(f => f.FlujoEjecucion)
+                .Include(f => f.Solicitud)
+                .FirstOrDefaultAsync(f => f.IdFlujoActivo == id);
+            if (flujoActivo == null) return NotFound();
+            return flujoActivo.ToFrontendDto();
         }
 
         // PUT: api/FlujosActivos/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutFlujoActivo(int id, FlujoActivo flujoActivo)
+        public async Task<IActionResult> PutFlujoActivo(int id, [FromBody] FlujoActivoUpdateDto dto)
         {
-            if (id != flujoActivo.IdFlujoActivo)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(flujoActivo).State = EntityState.Modified;
-
+            var flujo = await _context.FlujosActivos.FindAsync(id);
+            if (flujo == null) return NotFound();
+            flujo.ApplyUpdate(dto);
             try
             {
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!FlujoActivoExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                if (!FlujoActivoExists(id)) return NotFound();
+                throw;
             }
-
             return NoContent();
         }
 
         // POST: api/FlujosActivos
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<FlujoActivo>> PostFlujoActivo(FlujoActivo flujoActivo)
+        public async Task<ActionResult<FlujoActivoFrontendDto>> PostFlujoActivo([FromBody] FlujoActivoCreateDto dto)
         {
-            _context.FlujosActivos.Add(flujoActivo);
+            var model = dto.ToModel();
+            _context.FlujosActivos.Add(model);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetFlujoActivo", new { id = flujoActivo.IdFlujoActivo }, flujoActivo);
+            await _context.Entry(model).Reference(m => m.FlujoEjecucion).LoadAsync();
+            await _context.Entry(model).Reference(m => m.Solicitud).LoadAsync();
+            return CreatedAtAction(nameof(GetFlujoActivo), new { id = model.IdFlujoActivo }, model.ToFrontendDto());
         }
 
         // DELETE: api/FlujosActivos/5
