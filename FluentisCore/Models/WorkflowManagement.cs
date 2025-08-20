@@ -138,13 +138,13 @@ namespace FluentisCore.Models.WorkflowManagement
         [Required]
         public int VersionActual { get; set; } = 1;
 
-        public int FlujoEjecucionId { get; set; }
+        public int? FlujoEjecucionId { get; set; }
 
         [ForeignKey("FlujoEjecucionId")]
         public virtual FlujoAprobacion FlujoEjecucion { get; set; }
 
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-        public DateTime FechaInicio { get; set; }
+     
+        public DateTime FechaInicio { get; set; } = DateTime.Now;
 
         public DateTime? FechaFinalizacion { get; set; }
 

@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250820035301_ChangeFechaGeneration")]
+    partial class ChangeFechaGeneration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -750,7 +753,7 @@ namespace FluentisCore.Migrations
                     b.Property<DateTime>("FechaInicio")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("FlujoEjecucionId")
+                    b.Property<int>("FlujoEjecucionId")
                         .HasColumnType("int");
 
                     b.Property<string>("Nombre")
@@ -1288,7 +1291,8 @@ namespace FluentisCore.Migrations
                     b.HasOne("FluentisCore.Models.WorkflowManagement.FlujoAprobacion", "FlujoEjecucion")
                         .WithMany()
                         .HasForeignKey("FlujoEjecucionId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("FluentisCore.Models.WorkflowManagement.Solicitud", "Solicitud")
                         .WithMany()

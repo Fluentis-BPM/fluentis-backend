@@ -15,7 +15,7 @@ namespace FluentisCore.DTO
         [JsonPropertyName("nombre")] public string Nombre { get; set; } = string.Empty;
         [JsonPropertyName("descripcion")] public string? Descripcion { get; set; }
         [JsonPropertyName("version_actual")] public int VersionActual { get; set; }
-        [JsonPropertyName("flujo_ejecucion_id")] public int FlujoEjecucionId { get; set; }
+        [JsonPropertyName("flujo_ejecucion_id")] public int? FlujoEjecucionId { get; set; }
         [JsonPropertyName("fecha_inicio")] public DateTime FechaInicio { get; set; }
         [JsonPropertyName("fecha_finalizacion")] public DateTime? FechaFinalizacion { get; set; }
         // Frontend expects: 'encurso' | 'finalizado' | 'cancelado'

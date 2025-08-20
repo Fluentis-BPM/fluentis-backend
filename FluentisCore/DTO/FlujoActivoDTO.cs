@@ -13,7 +13,7 @@ namespace FluentisCore.DTO
         public string Nombre { get; set; } = string.Empty;
         public string? Descripcion { get; set; }
         public int VersionActual { get; set; }
-        public int FlujoEjecucionId { get; set; }
+        public int? FlujoEjecucionId { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime? FechaFinalizacion { get; set; }
         public EstadoFlujoActivo Estado { get; set; }
@@ -29,7 +29,7 @@ namespace FluentisCore.DTO
         public int SolicitudId { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public string? Descripcion { get; set; }
-        public int FlujoEjecucionId { get; set; }
+        public int? FlujoEjecucionId { get; set; }
         public int? VersionActual { get; set; }
         public EstadoFlujoActivo? Estado { get; set; }
     }

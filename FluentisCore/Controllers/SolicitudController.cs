@@ -340,9 +340,11 @@ namespace FluentisCore.Controllers
                             Nombre = solicitud.Nombre,
                             Descripcion = solicitud.Descripcion,
                             VersionActual = 1,
-                            FlujoEjecucionId = 0, // Temporal, ajusta según lógica
+                            FlujoEjecucionId = null,
+                            FechaInicio = DateTime.Now,
                             Estado = EstadoFlujoActivo.EnCurso
                         };
+                        Console.WriteLine($"Creando Flujo Activo para Solicitud {solicitud.IdSolicitud}");
                         _context.FlujosActivos.Add(flujoActivo);
                         await _context.SaveChangesAsync();
                     }
