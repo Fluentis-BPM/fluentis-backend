@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentisCore.DTO;
 using FluentisCore.Auth;
+using FluentisCore.Extensions;
 
 namespace FluentisCore.Controllers
 {
@@ -26,9 +27,9 @@ namespace FluentisCore.Controllers
 
         // GET: api/solicitudes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Solicitud>>> GetSolicitudes()
+        public async Task<ActionResult<IEnumerable<SolicitudDto>>> GetSolicitudes()
         {
-            return await _context.Solicitudes
+            var list = await _context.Solicitudes
                 .Include(s => s.Solicitante)
                 .Include(s => s.FlujoBase)
                 .Include(s => s.Inputs)
@@ -36,11 +37,12 @@ namespace FluentisCore.Controllers
                 .ThenInclude(rga => rga.Decisiones)
                 .ThenInclude(d => d.Usuario)
                 .ToListAsync();
+            return list.Select(s => s.ToDto()).ToList();
         }
 
         // GET: api/solicitudes/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Solicitud>> GetSolicitud(int id)
+    public async Task<ActionResult<SolicitudDto>> GetSolicitud(int id)
         {
             var solicitud = await _context.Solicitudes
                 .Include(s => s.Solicitante)
@@ -56,12 +58,12 @@ namespace FluentisCore.Controllers
                 return NotFound();
             }
 
-            return solicitud;
+            return solicitud.ToDto();
         }
 
         // POST: api/solicitudes
         [HttpPost]
-        public async Task<ActionResult<Solicitud>> CreateSolicitud([FromBody] SolicitudCreateDto solicitudDto)
+    public async Task<ActionResult<SolicitudDto>> CreateSolicitud([FromBody] SolicitudCreateDto solicitudDto)
         {
             if (!ModelState.IsValid)
             {
@@ -73,7 +75,7 @@ namespace FluentisCore.Controllers
                 SolicitanteId = solicitudDto.SolicitanteId,
                 FlujoBaseId = solicitudDto.FlujoBaseId,
                 Nombre = solicitudDto.Nombre,
-                Descripcion = solicitudDto.Descripcion,
+                Descripcion = solicitudDto.Descripcion ?? string.Empty,
                 Estado = EstadoSolicitud.Pendiente,
                 FechaCreacion = DateTime.Now
             };
@@ -88,8 +90,8 @@ namespace FluentisCore.Controllers
                     {
                         InputId = inputDto.InputId,
                         Nombre = inputDto.Nombre,
-                        PlaceHolder = inputDto.PlaceHolder,
-                        Valor = inputDto.Valor?.RawValue, // Puede ser null o vacío
+                        PlaceHolder = inputDto.PlaceHolder ?? string.Empty,
+                        Valor = inputDto.Valor?.RawValue ?? string.Empty, // Puede ser vacío
                         Requerido = inputDto.Requerido,
                         SolicitudId = solicitud.IdSolicitud // Se asignará después de guardar
                     };
@@ -131,7 +133,7 @@ namespace FluentisCore.Controllers
 
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, solicitud);
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, solicitud.ToDto());
         }
 
         // PUT: api/solicitudes/5
@@ -215,7 +217,7 @@ namespace FluentisCore.Controllers
 
         // POST: api/solicitudes/5/inputs
         [HttpPost("{id}/inputs")]
-        public async Task<ActionResult<RelacionInput>> AddInputToSolicitud(int id, [FromBody] RelacionInputCreateDto inputDto)
+    public async Task<ActionResult<RelacionInputDto>> AddInputToSolicitud(int id, [FromBody] RelacionInputCreateDto inputDto)
         {
             var solicitud = await _context.Solicitudes.FindAsync(id);
             if (solicitud == null)
@@ -227,8 +229,8 @@ namespace FluentisCore.Controllers
             {
                 InputId = inputDto.InputId,
                 Nombre = inputDto.Nombre,
-                PlaceHolder = inputDto.PlaceHolder,
-                Valor = inputDto.Valor?.RawValue, // Puede ser null o vacío
+                PlaceHolder = inputDto.PlaceHolder ?? string.Empty,
+                Valor = inputDto.Valor?.RawValue ?? string.Empty, // Puede ser vacío
                 Requerido = inputDto.Requerido,
                 SolicitudId = id
             };
@@ -236,12 +238,12 @@ namespace FluentisCore.Controllers
             _context.RelacionesInput.Add(input);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, input);
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, input.ToDto());
         }
 
         // POST: api/solicitudes/5/grupos-aprobacion
         [HttpPost("{id}/grupos-aprobacion")]
-        public async Task<ActionResult<RelacionGrupoAprobacion>> AddGrupoAprobacionToSolicitud(int id, [FromBody] RelacionGrupoAprobacionCreateDto grupoDto)
+    public async Task<ActionResult<RelacionGrupoAprobacionDto>> AddGrupoAprobacionToSolicitud(int id, [FromBody] RelacionGrupoAprobacionCreateDto grupoDto)
         {
             var solicitud = await _context.Solicitudes.FindAsync(id);
             if (solicitud == null)
@@ -258,7 +260,7 @@ namespace FluentisCore.Controllers
             _context.RelacionesGrupoAprobacion.Add(grupoRelacion);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, grupoRelacion);
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, grupoRelacion.ToDto());
         }
 
         // POST: api/solicitudes/5/decision
@@ -379,8 +381,8 @@ namespace FluentisCore.Controllers
             }
 
             // Actualizar solo los campos proporcionados, manteniendo los existentes si no se envían
-            if (inputDto.Valor != null) input.Valor = inputDto.Valor.RawValue; // Distingue entre null (no enviado) y "" (vacío)
-            if (inputDto.PlaceHolder != null) input.PlaceHolder = inputDto.PlaceHolder;
+            if (inputDto.Valor != null) input.Valor = inputDto.Valor.RawValue ?? string.Empty; // Distingue entre null (no enviado) y "" (vacío)
+            if (inputDto.PlaceHolder != null) input.PlaceHolder = inputDto.PlaceHolder ?? string.Empty;
             if (inputDto.Nombre != null) input.Nombre = inputDto.Nombre; // Nuevo: permite modificar Nombre
             if (inputDto.Requerido.HasValue) input.Requerido = inputDto.Requerido.Value;
 
