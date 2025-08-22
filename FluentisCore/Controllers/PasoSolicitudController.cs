@@ -532,6 +532,60 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
+        // POST: api/pasosolicitudes/{id}/conexiones (agregar UNA conexión sin reemplazar las existentes)
+       
+
+        [HttpPost("{id}/conexiones")]
+        public async Task<IActionResult> AddConnectionToPasoSolicitud(int id, [FromBody] ConexionCreateDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var origen = await _context.PasosSolicitud.FindAsync(id);
+            if (origen == null)
+            {
+                return NotFound("Paso origen no encontrado.");
+            }
+
+            var destino = await _context.PasosSolicitud.FindAsync(dto.DestinoId);
+            if (destino == null)
+            {
+                return NotFound("Paso destino no encontrado.");
+            }
+
+            if (destino.FlujoActivoId != origen.FlujoActivoId)
+            {
+                return BadRequest("El paso destino no pertenece al mismo flujo activo.");
+            }
+
+            var existente = await _context.CaminosParalelos
+                .AnyAsync(c => c.PasoOrigenId == id && c.PasoDestinoId == dto.DestinoId);
+            if (existente)
+            {
+                // Idempotente: si ya existe, no hacemos nada y devolvemos 204
+                return NoContent();
+            }
+
+            var nuevoCamino = new CaminoParalelo
+            {
+                PasoOrigenId = id,
+                PasoDestinoId = dto.DestinoId,
+                EsExcepcion = dto.EsExcepcion
+            };
+
+            _context.CaminosParalelos.Add(nuevoCamino);
+            await _context.SaveChangesAsync();
+
+            // Actualizar tipo_flujo del paso origen
+            origen.TipoFlujo = await GetTipoFlujo(id);
+            _context.Entry(origen).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, origen);
+        }
+
         // PUT: api/pasosolicitudes/{id}/conexiones (cambiar todas las conexiones)
         [HttpPut("{id}/conexiones")]
         public async Task<IActionResult> UpdateConnectionsOfPasoSolicitud(int id, [FromBody] List<int> nuevosDestinos)

@@ -45,4 +45,10 @@ namespace FluentisCore.DTO
         [Required]
         public string Motivo { get; set; }
     }
+
+     public class ConexionCreateDto
+    {
+        public int DestinoId { get; set; }
+        public bool EsExcepcion { get; set; } = false;
+    }
 }
