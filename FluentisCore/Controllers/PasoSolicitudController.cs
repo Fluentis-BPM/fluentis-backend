@@ -102,6 +102,41 @@ namespace FluentisCore.Controllers
             return CreatedAtAction(nameof(GetPasoSolicitud), new { id = paso.IdPasoSolicitud }, paso);
         }
 
+        // DELETE: api/pasosolicitud/{id} (eliminar paso)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePasoSolicitud(int id)
+        {
+            var paso = await _context.PasosSolicitud.FindAsync(id);
+            if (paso == null)
+            {
+                return NotFound("Paso de solicitud no encontrado.");
+            }
+
+            // Cargar colecciones relacionadas
+            await _context.Entry(paso).Collection(p => p.RelacionesInput).LoadAsync();
+            await _context.Entry(paso).Reference(p => p.RelacionesGrupoAprobacion).LoadAsync();
+            await _context.Entry(paso).Collection(p => p.Comentarios).LoadAsync();
+            await _context.Entry(paso).Collection(p => p.Excepciones).LoadAsync();
+
+            // Eliminar dependencias para evitar conflictos de FK (ajusta DbSets si tu contexto usa otros nombres)
+            if (paso.RelacionesInput?.Any() == true)
+                _context.RelacionesInput.RemoveRange(paso.RelacionesInput);
+
+            if (paso.RelacionesGrupoAprobacion != null)
+                _context.RelacionesGrupoAprobacion.Remove(paso.RelacionesGrupoAprobacion);
+
+            if (paso.Comentarios?.Any() == true)
+                _context.Comentarios.RemoveRange(paso.Comentarios);
+
+            if (paso.Excepciones?.Any() == true)
+                _context.Excepciones.RemoveRange(paso.Excepciones);
+
+            _context.PasosSolicitud.Remove(paso);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         // PUT: api/pasosolicitudes/{id} (solo campos básicos)
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePasoSolicitud(int id, [FromBody] PasoSolicitudUpdateDto dto)
