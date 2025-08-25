@@ -49,16 +49,23 @@ namespace FluentisCore.Controllers
                 paso.TipoFlujo = await _workflowService.GetTipoFlujo(paso.IdPasoSolicitud, _context);
             }
 
-            var caminos = await _context.CaminosParalelos
-                .Where(c => pasos.Select(p => p.PasoId).Contains(c.PasoOrigenId)
-                          || pasos.Select(p => p.PasoId).Contains(c.PasoDestinoId))
+            var conexiones = await _context.ConexionesPasoSolicitud
+                .Where(c => pasos.Select(p => p.IdPasoSolicitud).Contains(c.PasoOrigenId)
+                          || pasos.Select(p => p.IdPasoSolicitud).Contains(c.PasoDestinoId))
                 .ToListAsync();
 
             var response = new FlujoActivoResponseDto
             {
                 FlujoActivoId = flujoActivoId,
                 Pasos = pasos.Select(p => p.ToFrontendDto()).ToList(),
-                Caminos = caminos.Select(c => c.ToFrontendDto()).ToList()
+                Caminos = conexiones.Select(c => new CaminoParaleloFrontendDto
+                {
+                    IdCamino = c.IdConexion,
+                    PasoOrigenId = c.PasoOrigenId,
+                    PasoDestinoId = c.PasoDestinoId,
+                    EsExcepcion = c.EsExcepcion,
+                    Nombre = null
+                }).ToList()
             };
 
             return response;

@@ -82,7 +82,7 @@ namespace FluentisCore.DTO
         [JsonPropertyName("responsable_id")] public int? ResponsableId { get; set; }
         [JsonPropertyName("fecha_inicio")] public DateTime FechaInicio { get; set; }
         [JsonPropertyName("fecha_fin")] public DateTime? FechaFin { get; set; }
-        [JsonPropertyName("tipo_paso")] public string TipoPaso { get; set; } = "ejecucion"; // 'ejecucion' | 'aprobacion'
+        [JsonPropertyName("tipo_paso")] public string TipoPaso { get; set; } = "ejecucion"; // 'ejecucion' | 'aprobacion' | 'inicio' | 'fin'
         [JsonPropertyName("estado")] public string Estado { get; set; } = "pendiente";
         [JsonPropertyName("nombre")] public string? Nombre { get; set; }
         [JsonPropertyName("tipo_flujo")] public string TipoFlujo { get; set; } = "normal"; // 'normal' | 'bifurcacion' | 'union'

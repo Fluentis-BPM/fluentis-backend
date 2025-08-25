@@ -13,9 +13,8 @@ namespace FluentisCore.DTO
         public TipoPaso TipoPaso { get; set; }
         public EstadoPasoSolicitud Estado { get; set; } = EstadoPasoSolicitud.Pendiente; // Estado por defecto
         public string Nombre { get; set; }
-        [Required]
-        public ReglaAprobacion ReglaAprobacion { get; set; } // Cambiado de ReglaAprobacion
-        public List<RelacionInputCreateDto> Inputs { get; set; } // Incluye detalles al crear
+        public ReglaAprobacion? ReglaAprobacion { get; set; } // Opcional para tipos Inicio y Fin
+        public List<RelacionInputCreateDto>? Inputs { get; set; } // Incluye detalles al crear
     }
 
     public class PasoSolicitudUpdateDto
@@ -23,7 +22,7 @@ namespace FluentisCore.DTO
         public EstadoPasoSolicitud Estado { get; set; } = EstadoPasoSolicitud.Pendiente; // Estado por defecto
         public DateTime? FechaFin { get; set; }
         public int? ResponsableId { get; set; }
-        public string Nombre { get; set; }
+        public string? Nombre { get; set; }
     }
 
 
@@ -35,7 +34,7 @@ namespace FluentisCore.DTO
         [Required]
         public int UsuarioId { get; set; }
         [Required]
-        public string Contenido { get; set; }
+        public string Contenido { get; set; } = string.Empty;
     }
 
     public class ExcepcionCreateDto
@@ -43,7 +42,7 @@ namespace FluentisCore.DTO
         [Required]
         public int UsuarioId { get; set; }
         [Required]
-        public string Motivo { get; set; }
+        public string Motivo { get; set; } = string.Empty;
     }
 
      public class ConexionCreateDto

@@ -10,7 +10,7 @@ using FluentisCore.Models.UserManagement;
 namespace FluentisCore.Models.WorkflowManagement
 {
     public enum TipoFlujo { Normal, Bifurcacion, Union }
-    public enum TipoPaso { Ejecucion, Aprobacion }
+    public enum TipoPaso { Ejecucion, Aprobacion, Inicio, Fin }
     public enum ReglaAprobacion { Unanimidad, PrimeraAprobacion, Mayoria }
     public enum EstadoSolicitud { Aprobado, Pendiente, Rechazado }
     public enum EstadoFlujoActivo { EnCurso, Finalizado, Cancelado }
@@ -82,6 +82,25 @@ namespace FluentisCore.Models.WorkflowManagement
 
         [ForeignKey("PasoDestinoId")]
         public virtual PasoFlujo PasoDestino { get; set; }
+
+        public bool EsExcepcion { get; set; }
+    }
+
+    public class ConexionPasoSolicitud
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int IdConexion { get; set; }
+
+        public int PasoOrigenId { get; set; }
+
+        [ForeignKey("PasoOrigenId")]
+        public virtual PasoSolicitud PasoOrigen { get; set; }
+
+        public int PasoDestinoId { get; set; }
+
+        [ForeignKey("PasoDestinoId")]
+        public virtual PasoSolicitud PasoDestino { get; set; }
 
         public bool EsExcepcion { get; set; }
     }
@@ -177,8 +196,7 @@ namespace FluentisCore.Models.WorkflowManagement
         [ForeignKey("ResponsableId")]
         public virtual Usuario Responsable { get; set; }
 
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-        public DateTime FechaInicio { get; set; }
+        public DateTime FechaInicio { get; set; } = DateTime.UtcNow;
 
         public DateTime? FechaFin { get; set; }
 

@@ -4,6 +4,7 @@ using FluentisCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FluentisCore.Migrations
 {
     [DbContext(typeof(FluentisContext))]
-    partial class FluentisContextModelSnapshot : ModelSnapshot
+    [Migration("20250823135423_AddTipoPasoInicioFin")]
+    partial class AddTipoPasoInicioFin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -729,32 +732,6 @@ namespace FluentisCore.Migrations
                     b.ToTable("CaminosParalelos");
                 });
 
-            modelBuilder.Entity("FluentisCore.Models.WorkflowManagement.ConexionPasoSolicitud", b =>
-                {
-                    b.Property<int>("IdConexion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdConexion"));
-
-                    b.Property<bool>("EsExcepcion")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("PasoDestinoId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PasoOrigenId")
-                        .HasColumnType("int");
-
-                    b.HasKey("IdConexion");
-
-                    b.HasIndex("PasoDestinoId");
-
-                    b.HasIndex("PasoOrigenId");
-
-                    b.ToTable("ConexionesPasoSolicitud");
-                });
-
             modelBuilder.Entity("FluentisCore.Models.WorkflowManagement.FlujoActivo", b =>
                 {
                     b.Property<int>("IdFlujoActivo")
@@ -1298,25 +1275,6 @@ namespace FluentisCore.Migrations
                         .IsRequired();
 
                     b.HasOne("FluentisCore.Models.WorkflowManagement.PasoFlujo", "PasoOrigen")
-                        .WithMany()
-                        .HasForeignKey("PasoOrigenId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("PasoDestino");
-
-                    b.Navigation("PasoOrigen");
-                });
-
-            modelBuilder.Entity("FluentisCore.Models.WorkflowManagement.ConexionPasoSolicitud", b =>
-                {
-                    b.HasOne("FluentisCore.Models.WorkflowManagement.PasoSolicitud", "PasoDestino")
-                        .WithMany()
-                        .HasForeignKey("PasoDestinoId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("FluentisCore.Models.WorkflowManagement.PasoSolicitud", "PasoOrigen")
                         .WithMany()
                         .HasForeignKey("PasoOrigenId")
                         .OnDelete(DeleteBehavior.NoAction)
