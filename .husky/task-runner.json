@@ -27,5 +27,40 @@
         "${args}"
     ]
     }
+        ,
+        {
+            "name": "e2e-up",
+            "group": "pre-commit",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "docker compose up -d; $LASTEXITCODE -ne 0 | Out-Null"
+            ]
+        },
+            {
+                "name": "e2e-tests",
+                "group": "pre-commit",
+                "command": "dotnet",
+                "args": [
+                    "test",
+                    "FluentisCore.Tests/FluentisCore.Tests.csproj",
+                    "-c",
+                    "Debug",
+                        "--filter",
+                        "Category=E2E",
+                    "/p:CollectCoverage=false"
+                ]
+            },
+                {
+                    "name": "e2e-down",
+                    "group": "pre-commit",
+                    "command": "powershell",
+                    "args": [
+                        "-NoProfile",
+                        "-Command",
+                        "docker compose down"
+                    ]
+                }
 ]
 }
