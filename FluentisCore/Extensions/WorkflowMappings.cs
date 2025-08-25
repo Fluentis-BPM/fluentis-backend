@@ -167,6 +167,8 @@ namespace FluentisCore.Extensions
             {
                 TipoPaso.Ejecucion => "ejecucion",
                 TipoPaso.Aprobacion => "aprobacion",
+                TipoPaso.Inicio => "inicio",
+                TipoPaso.Fin => "fin",
                 _ => "ejecucion"
             };
 

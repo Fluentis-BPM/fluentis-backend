@@ -10,6 +10,7 @@ using System.Linq;
 using FluentisCore.DTO;
 using FluentisCore.Auth;
 using FluentisCore.Extensions;
+using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
@@ -19,10 +20,12 @@ namespace FluentisCore.Controllers
     public class SolicitudesController : ControllerBase
     {
         private readonly FluentisContext _context;
+        private readonly WorkflowInitializationService _workflowInitializationService;
 
-        public SolicitudesController(FluentisContext context)
+        public SolicitudesController(FluentisContext context, WorkflowInitializationService workflowInitializationService)
         {
             _context = context;
+            _workflowInitializationService = workflowInitializationService;
         }
 
         // GET: api/solicitudes
@@ -347,6 +350,11 @@ namespace FluentisCore.Controllers
                         Console.WriteLine($"Creando Flujo Activo para Solicitud {solicitud.IdSolicitud}");
                         _context.FlujosActivos.Add(flujoActivo);
                         await _context.SaveChangesAsync();
+
+                        // Crear el paso inicial con la información de la solicitud
+                        Console.WriteLine($"Creando paso inicial para Flujo Activo {flujoActivo.IdFlujoActivo}");
+                        await _workflowInitializationService.CrearPasoInicialAsync(flujoActivo);
+                        Console.WriteLine($"Paso inicial creado exitosamente");
                     }
                 }
                 else if (algunaRechazada)

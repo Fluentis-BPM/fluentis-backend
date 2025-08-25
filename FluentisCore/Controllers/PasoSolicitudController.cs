@@ -43,7 +43,7 @@ namespace FluentisCore.Controllers
             var paso = new PasoSolicitud
             {
                 FlujoActivoId = dto.FlujoActivoId,
-                ResponsableId = dto.TipoPaso == TipoPaso.Ejecucion ? dto.ResponsableId : null,
+                ResponsableId = (dto.TipoPaso == TipoPaso.Ejecucion || dto.TipoPaso == TipoPaso.Inicio) ? dto.ResponsableId : null,
                 TipoPaso = dto.TipoPaso,
                 Estado = dto.Estado,
                 Nombre = dto.Nombre,
@@ -54,16 +54,16 @@ namespace FluentisCore.Controllers
             _context.PasosSolicitud.Add(paso);
             await _context.SaveChangesAsync();
 
-            // Crear CaminoParalelo si hay origen
+            // Crear ConexionPasoSolicitud si hay origen
             if (dto.PasoOrigenId.HasValue)
             {
-                var camino = new CaminoParalelo
+                var conexion = new ConexionPasoSolicitud
                 {
                     PasoOrigenId = dto.PasoOrigenId.Value,
                     PasoDestinoId = paso.IdPasoSolicitud,
                     EsExcepcion = false
                 };
-                _context.CaminosParalelos.Add(camino);
+                _context.ConexionesPasoSolicitud.Add(conexion);
                 await _context.SaveChangesAsync();
 
                 // Actualizar tipo_flujo del paso origen
@@ -76,8 +76,8 @@ namespace FluentisCore.Controllers
                 }
             }
 
-            // Inicializar RelacionInput para ejecución
-            if (dto.TipoPaso == TipoPaso.Ejecucion && dto.Inputs != null)
+            // Inicializar RelacionInput para ejecución, inicio y fin
+            if ((dto.TipoPaso == TipoPaso.Ejecucion || dto.TipoPaso == TipoPaso.Inicio || dto.TipoPaso == TipoPaso.Fin) && dto.Inputs != null)
             {
                 foreach (var inputDto in dto.Inputs)
                 {
@@ -510,14 +510,14 @@ namespace FluentisCore.Controllers
         [HttpDelete("{id}/conexiones/{destinoId}")]
         public async Task<IActionResult> RemoveConnectionFromPasoSolicitud(int id, int destinoId)
         {
-            var camino = await _context.CaminosParalelos
+            var conexion = await _context.ConexionesPasoSolicitud
                 .FirstOrDefaultAsync(c => c.PasoOrigenId == id && c.PasoDestinoId == destinoId);
-            if (camino == null)
+            if (conexion == null)
             {
                 return NotFound("Conexión no encontrada.");
             }
 
-            _context.CaminosParalelos.Remove(camino);
+            _context.ConexionesPasoSolicitud.Remove(conexion);
             await _context.SaveChangesAsync();
 
             // Actualizar tipo_flujo del paso origen
@@ -560,7 +560,7 @@ namespace FluentisCore.Controllers
                 return BadRequest("El paso destino no pertenece al mismo flujo activo.");
             }
 
-            var existente = await _context.CaminosParalelos
+            var existente = await _context.ConexionesPasoSolicitud
                 .AnyAsync(c => c.PasoOrigenId == id && c.PasoDestinoId == dto.DestinoId);
             if (existente)
             {
@@ -568,14 +568,14 @@ namespace FluentisCore.Controllers
                 return NoContent();
             }
 
-            var nuevoCamino = new CaminoParalelo
+            var nuevaConexion = new ConexionPasoSolicitud
             {
                 PasoOrigenId = id,
                 PasoDestinoId = dto.DestinoId,
                 EsExcepcion = dto.EsExcepcion
             };
 
-            _context.CaminosParalelos.Add(nuevoCamino);
+            _context.ConexionesPasoSolicitud.Add(nuevaConexion);
             await _context.SaveChangesAsync();
 
             // Actualizar tipo_flujo del paso origen
@@ -602,9 +602,9 @@ namespace FluentisCore.Controllers
             }
 
             // Eliminar conexiones existentes
-            var conexionesExistentes = await _context.CaminosParalelos
+            var conexionesExistentes = await _context.ConexionesPasoSolicitud
                 .Where(c => c.PasoOrigenId == id).ToListAsync();
-            _context.CaminosParalelos.RemoveRange(conexionesExistentes);
+            _context.ConexionesPasoSolicitud.RemoveRange(conexionesExistentes);
 
             // Crear nuevas conexiones
             foreach (var destinoId in nuevosDestinos)
@@ -612,13 +612,13 @@ namespace FluentisCore.Controllers
                 var destino = await _context.PasosSolicitud.FindAsync(destinoId);
                 if (destino != null && destino.FlujoActivoId == paso.FlujoActivoId)
                 {
-                    var nuevoCamino = new CaminoParalelo
+                    var nuevaConexion = new ConexionPasoSolicitud
                     {
                         PasoOrigenId = id,
                         PasoDestinoId = destinoId,
                         EsExcepcion = false
                     };
-                    _context.CaminosParalelos.Add(nuevoCamino);
+                    _context.ConexionesPasoSolicitud.Add(nuevaConexion);
                 }
                 else
                 {
@@ -683,11 +683,11 @@ namespace FluentisCore.Controllers
 
         private async Task<TipoFlujo> GetTipoFlujo(int pasoId)
         {
-            var destinos = await _context.CaminosParalelos
+            var destinos = await _context.ConexionesPasoSolicitud
                 .Where(c => c.PasoOrigenId == pasoId)
                 .Select(c => c.PasoDestinoId)
                 .ToListAsync();
-            var origenes = await _context.CaminosParalelos
+            var origenes = await _context.ConexionesPasoSolicitud
                 .Where(c => c.PasoDestinoId == pasoId)
                 .Select(c => c.PasoOrigenId)
                 .ToListAsync();
@@ -702,7 +702,8 @@ namespace FluentisCore.Controllers
             return _context.PasosSolicitud.Any(e => e.IdPasoSolicitud == id);
         }
 
-        private async Task<ActionResult<PasoSolicitud>> GetPasoSolicitud(int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PasoSolicitud>> GetPasoSolicitud(int id)
         {
             var paso = await _context.PasosSolicitud.FindAsync(id);
             if (paso == null)

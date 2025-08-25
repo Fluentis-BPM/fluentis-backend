@@ -26,6 +26,7 @@ namespace FluentisCore.Models
         public DbSet<FlujoAprobacion> FlujosAprobacion { get; set; }
         public DbSet<PasoFlujo> PasosFlujo { get; set; }
         public DbSet<CaminoParalelo> CaminosParalelos { get; set; }
+        public DbSet<ConexionPasoSolicitud> ConexionesPasoSolicitud { get; set; }
         public DbSet<Solicitud> Solicitudes { get; set; }
         public DbSet<FlujoActivo> FlujosActivos { get; set; }
         public DbSet<PasoSolicitud> PasosSolicitud { get; set; }
@@ -225,6 +226,24 @@ namespace FluentisCore.Models
                     .WithOne(e => e.PasoSolicitud)
                     .HasForeignKey(e => e.PasoSolicitudId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configuración para ConexionPasoSolicitud
+            modelBuilder.Entity<ConexionPasoSolicitud>(entity =>
+            {
+                entity.HasKey(c => c.IdConexion);
+
+                // Configurar la relación con PasoOrigen sin cascade delete
+                entity.HasOne(c => c.PasoOrigen)
+                    .WithMany()
+                    .HasForeignKey(c => c.PasoOrigenId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // Configurar la relación con PasoDestino sin cascade delete
+                entity.HasOne(c => c.PasoDestino)
+                    .WithMany()
+                    .HasForeignKey(c => c.PasoDestinoId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
         public DbSet<FluentisCore.Models.UserManagement.Cargo> Cargo { get; set; } = default!;

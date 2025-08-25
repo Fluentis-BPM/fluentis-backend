@@ -76,6 +76,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<WorkflowInitializationService>();
 
 
 // Configura Microsoft Graph
