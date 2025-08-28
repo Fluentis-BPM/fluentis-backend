@@ -10,6 +10,7 @@ using FluentisCore.Models.WorkflowManagement;
 using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.MetricsAndReportsManagement;
+using FluentisCore.Extensions;
 
 namespace FluentisCore.Controllers
 {
@@ -283,9 +284,10 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
-        // PUT: api/pasosolicitudes/{id}/grupoaprobacion (actualizar grupo de aprobación)
-        [HttpPut("{id}/grupoaprobacion")]
-        public async Task<IActionResult> UpdateGrupoAprobacion(int id, [FromBody] RelacionGrupoAprobacionCreateDto dto)
+
+        // POST: api/pasosolicitudes/{id}/grupoaprobacion (crear relación de grupo de aprobación)
+        [HttpPost("{id}/grupoaprobacion")]
+        public async Task<ActionResult<RelacionGrupoAprobacionDto>> CrearRelacionPasoGrupoAprobacion(int id, [FromBody] RelacionGrupoAprobacionCreateDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -309,25 +311,25 @@ namespace FluentisCore.Controllers
                 return NotFound("Grupo de aprobación no encontrado.");
             }
 
-            var relacion = await _context.RelacionesGrupoAprobacion
-                .FirstOrDefaultAsync(r => r.PasoSolicitudId == id);
-            if (relacion == null)
+            var existeRelacion = await _context.RelacionesGrupoAprobacion
+                .AnyAsync(r => r.PasoSolicitudId == id);
+            if (existeRelacion)
             {
-                relacion = new RelacionGrupoAprobacion
-                {
-                    GrupoAprobacionId = dto.GrupoAprobacionId,
-                    PasoSolicitudId = id
-                };
-                _context.RelacionesGrupoAprobacion.Add(relacion);
-            }
-            else
-            {
-                relacion.GrupoAprobacionId = dto.GrupoAprobacionId;
-                _context.Entry(relacion).State = EntityState.Modified;
+                return Conflict("El paso ya tiene un grupo de aprobación asociado. Use PUT para actualizarlo.");
             }
 
+            var relacion = new RelacionGrupoAprobacion
+            {
+                GrupoAprobacionId = dto.GrupoAprobacionId,
+                PasoSolicitudId = id
+            };
+
+            _context.RelacionesGrupoAprobacion.Add(relacion);
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            // Map to DTO and return 201 pointing to the paso resource
+            var resultDto = relacion.ToDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, resultDto);
         }
 
         // POST: api/pasosolicitudes/{id}/comentarios (agregar comentario)
