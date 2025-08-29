@@ -266,22 +266,42 @@ namespace FluentisCore.Modules.DBInit
 
         public void InsertMockInputs()
         {
-            if (_context.Inputs.Any())
-                return; // Ya hay datos, no hace nada
+            // Asegura que todos los valores del enum TipoInput existan en la tabla Inputs.
+            // Idempotente: solo inserta los que faltan; no duplica existentes.
+            var existing = _context.Inputs
+                .Select(i => i.TipoInput)
+                .ToHashSet();
 
-            var mockInputs = new List<Inputs>
+            var defaults = new Dictionary<TipoInput, bool>
             {
-                new Inputs { TipoInput = TipoInput.TextoCorto, EsJson = false },
-                new Inputs { TipoInput = TipoInput.TextoLargo, EsJson = false },
-                new Inputs { TipoInput = TipoInput.Combobox, EsJson = true },
-                new Inputs { TipoInput = TipoInput.MultipleCheckbox, EsJson = true },
-                new Inputs { TipoInput = TipoInput.Date, EsJson = false },
-                new Inputs { TipoInput = TipoInput.Number, EsJson = false },
-                new Inputs { TipoInput = TipoInput.Archivo, EsJson = false }
+                { TipoInput.TextoCorto, false },
+                { TipoInput.TextoLargo, false },
+                { TipoInput.Combobox, true },
+                { TipoInput.MultipleCheckbox, true },
+                { TipoInput.Date, false },
+                { TipoInput.Number, false },
+                { TipoInput.Archivo, false },
             };
 
-            _context.Inputs.AddRange(mockInputs);
-            _context.SaveChanges();
+            var toAdd = new List<Inputs>();
+            foreach (var kvp in defaults)
+            {
+                if (!existing.Contains(kvp.Key))
+                {
+                    toAdd.Add(new Inputs { TipoInput = kvp.Key, EsJson = kvp.Value });
+                }
+            }
+
+            if (toAdd.Count > 0)
+            {
+                _context.Inputs.AddRange(toAdd);
+                _context.SaveChanges();
+                Console.WriteLine($"✅ Inserted {toAdd.Count} input catalog item(s) (Tipos de Input).");
+            }
+            else
+            {
+                Console.WriteLine("ℹ️ Input catalog already up to date (Tipos de Input).");
+            }
         }
 
         public void InsertMockWorkflows()
