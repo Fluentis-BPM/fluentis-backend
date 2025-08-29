@@ -130,6 +130,9 @@ using (var scope = app.Services.CreateScope())
 
     var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
 
+    // Siempre asegurar catálogo de Inputs, independientemente de datos de ejemplo.
+    initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
+
     var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
     if (File.Exists(jsonPath))
     {
@@ -140,7 +143,6 @@ using (var scope = app.Services.CreateScope())
         initDB.InsertMockUsers(); // Insert mock users with relationships
         initDB.InsertMockApprovalGroups(); // Insert approval groups
         initDB.InsertMockUserGroupRelations(); // Link users to approval groups
-        initDB.InsertMockInputs(); // Insert input types
         initDB.InsertMockWorkflows(); // Insert sample workflows
         Console.WriteLine("✅ Base de datos inicializada con datos de prueba completos");
         Console.WriteLine("👥 Usuarios creados con relaciones a departamentos, roles y cargos");
