@@ -45,17 +45,38 @@ namespace FluentisCore.DTO
             if (string.IsNullOrEmpty(RawValue))
                 return null;
 
-            return TipoInput switch
+            try
             {
-                TipoInput.TextoCorto => RawValue,
-                TipoInput.TextoLargo => RawValue,
-                TipoInput.Date => DateTime.TryParse(RawValue, out var date) ? date : null,
-                TipoInput.Number => decimal.TryParse(RawValue, out var number) ? number : null,
-                TipoInput.Combobox => RawValue,
-                TipoInput.MultipleCheckbox => string.IsNullOrEmpty(RawValue) ? null : JsonSerializer.Deserialize<List<string>>(RawValue),
-                TipoInput.Archivo => string.IsNullOrEmpty(RawValue) ? null : JsonSerializer.Deserialize<FileInfoDto>(RawValue),
-                _ => RawValue
-            };
+                return TipoInput switch
+                {
+                    TipoInput.TextoCorto => RawValue,
+                    TipoInput.TextoLargo => RawValue,
+                    TipoInput.Date => DateTime.TryParse(RawValue, out var date) ? date : RawValue,
+                    TipoInput.Number => decimal.TryParse(RawValue, out var number) ? number : RawValue,
+                    TipoInput.Combobox => RawValue,
+                    // Tolerar valores no JSON devolviendo el string crudo para evitar 500 en serialización
+            TipoInput.MultipleCheckbox => string.IsNullOrEmpty(RawValue) ? null : (object?)TryDeserializeOrFallback<List<string>>(RawValue, RawValue) ?? RawValue,
+            TipoInput.Archivo => string.IsNullOrEmpty(RawValue) ? null : (object?)TryDeserializeOrFallback<FileInfoDto>(RawValue, RawValue) ?? RawValue,
+                    _ => RawValue
+                };
+            }
+            catch
+            {
+                // Si algo falla durante la conversión, devolver el valor crudo para no romper la respuesta
+                return RawValue;
+            }
+        }
+
+    private static TOut? TryDeserializeOrFallback<TOut>(string json, object? fallback)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<TOut>(json);
+            }
+            catch
+            {
+        return fallback is TOut t ? t : default;
+            }
         }
 
         private string? ConvertToRawValue(object? value)

@@ -10,6 +10,7 @@ using FluentisCore.Models.WorkflowManagement;
 using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.MetricsAndReportsManagement;
+using FluentisCore.Extensions;
 
 namespace FluentisCore.Controllers
 {
@@ -88,8 +89,8 @@ namespace FluentisCore.Controllers
                         {
                             InputId = inputDto.InputId,
                             Nombre = inputDto.Nombre,
-                            Valor = inputDto.Valor?.RawValue,
-                            PlaceHolder = inputDto.PlaceHolder,
+                            Valor = inputDto.Valor?.RawValue ?? string.Empty,
+                            PlaceHolder = inputDto.PlaceHolder ?? string.Empty,
                             Requerido = inputDto.Requerido,
                             PasoSolicitudId = paso.IdPasoSolicitud
                         };
@@ -99,7 +100,9 @@ namespace FluentisCore.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id = paso.IdPasoSolicitud }, paso);
+            // Devolver una representación plana para evitar ciclos de serialización
+            var pasoResult = paso.ToFrontendDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id = paso.IdPasoSolicitud }, pasoResult);
         }
 
         // DELETE: api/pasosolicitud/{id} (eliminar paso)
@@ -153,20 +156,17 @@ namespace FluentisCore.Controllers
             }
 
             // Validar estado según tipo_paso
-            if (dto.Estado != null)
+            var validStates = new[] { EstadoPasoSolicitud.Pendiente, EstadoPasoSolicitud.Aprobado, 
+                                    EstadoPasoSolicitud.Rechazado, EstadoPasoSolicitud.Excepcion };
+            if (paso.TipoPaso == TipoPaso.Ejecucion)
             {
-                var validStates = new[] { EstadoPasoSolicitud.Pendiente, EstadoPasoSolicitud.Aprobado, 
-                                        EstadoPasoSolicitud.Rechazado, EstadoPasoSolicitud.Excepcion };
-                if (paso.TipoPaso == TipoPaso.Ejecucion)
-                {
-                    validStates = validStates.Concat(new[] { EstadoPasoSolicitud.Entregado }).ToArray();
-                }
-                if (!validStates.Contains(dto.Estado))
-                {
-                    return BadRequest("Estado no válido para este tipo de paso.");
-                }
-                paso.Estado = dto.Estado;
+                validStates = validStates.Concat(new[] { EstadoPasoSolicitud.Entregado }).ToArray();
             }
+            if (!validStates.Contains(dto.Estado))
+            {
+                return BadRequest("Estado no válido para este tipo de paso.");
+            }
+            paso.Estado = dto.Estado;
 
             paso.FechaFin = dto.FechaFin ?? paso.FechaFin;
             if (paso.TipoPaso == TipoPaso.Ejecucion && dto.ResponsableId.HasValue)
@@ -228,15 +228,17 @@ namespace FluentisCore.Controllers
             {
                 InputId = dto.InputId,
                 Nombre = dto.Nombre,
-                Valor = dto.Valor?.RawValue,
-                PlaceHolder = dto.PlaceHolder,
+                Valor = dto.Valor?.RawValue ?? string.Empty,
+                PlaceHolder = dto.PlaceHolder ?? string.Empty,
                 Requerido = dto.Requerido,
                 PasoSolicitudId = id
             };
             _context.RelacionesInput.Add(relacion);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, paso);
+            // Evitar ciclos de serialización devolviendo un DTO plano sin navegaciones cíclicas
+            var result = relacion.ToFrontendDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, result);
         }
 
         // PUT: api/pasosolicitudes/{id}/inputs/{inputId} (editar input)
@@ -255,7 +257,14 @@ namespace FluentisCore.Controllers
                 return NotFound("Relación de input no encontrada.");
             }
 
-            relacion.Valor = dto.Valor.RawValue ?? relacion.Valor;
+            if (dto.Valor != null)
+            {
+                var newRaw = dto.Valor.RawValue;
+                if (newRaw != null)
+                {
+                    relacion.Valor = newRaw;
+                }
+            }
             relacion.PlaceHolder = dto.PlaceHolder ?? relacion.PlaceHolder;
             if (dto.Requerido.HasValue) relacion.Requerido = dto.Requerido.Value;
             relacion.Nombre = dto.Nombre ?? relacion.Nombre;
@@ -283,9 +292,10 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
-        // PUT: api/pasosolicitudes/{id}/grupoaprobacion (actualizar grupo de aprobación)
-        [HttpPut("{id}/grupoaprobacion")]
-        public async Task<IActionResult> UpdateGrupoAprobacion(int id, [FromBody] RelacionGrupoAprobacionCreateDto dto)
+
+        // POST: api/pasosolicitudes/{id}/grupoaprobacion (crear relación de grupo de aprobación)
+        [HttpPost("{id}/grupoaprobacion")]
+        public async Task<ActionResult<RelacionGrupoAprobacionDto>> CrearRelacionPasoGrupoAprobacion(int id, [FromBody] RelacionGrupoAprobacionCreateDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -309,25 +319,25 @@ namespace FluentisCore.Controllers
                 return NotFound("Grupo de aprobación no encontrado.");
             }
 
-            var relacion = await _context.RelacionesGrupoAprobacion
-                .FirstOrDefaultAsync(r => r.PasoSolicitudId == id);
-            if (relacion == null)
+            var existeRelacion = await _context.RelacionesGrupoAprobacion
+                .AnyAsync(r => r.PasoSolicitudId == id);
+            if (existeRelacion)
             {
-                relacion = new RelacionGrupoAprobacion
-                {
-                    GrupoAprobacionId = dto.GrupoAprobacionId,
-                    PasoSolicitudId = id
-                };
-                _context.RelacionesGrupoAprobacion.Add(relacion);
-            }
-            else
-            {
-                relacion.GrupoAprobacionId = dto.GrupoAprobacionId;
-                _context.Entry(relacion).State = EntityState.Modified;
+                return Conflict("El paso ya tiene un grupo de aprobación asociado. Use PUT para actualizarlo.");
             }
 
+            var relacion = new RelacionGrupoAprobacion
+            {
+                GrupoAprobacionId = dto.GrupoAprobacionId,
+                PasoSolicitudId = id
+            };
+
+            _context.RelacionesGrupoAprobacion.Add(relacion);
             await _context.SaveChangesAsync();
-            return NoContent();
+
+            // Map to DTO and return 201 pointing to the paso resource
+            var resultDto = relacion.ToDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, resultDto);
         }
 
         // POST: api/pasosolicitudes/{id}/comentarios (agregar comentario)
@@ -355,7 +365,8 @@ namespace FluentisCore.Controllers
             _context.Comentarios.Add(comentario);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, paso);
+            var pasoDto = paso.ToFrontendDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, pasoDto);
         }
 
         // DELETE: api/pasosolicitudes/{id}/comentarios/{comentarioId} (quitar comentario)
@@ -408,7 +419,8 @@ namespace FluentisCore.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, paso);
+            var pasoDto2 = paso.ToFrontendDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, pasoDto2);
         }
 
         // DELETE: api/pasosolicitudes/{id}/excepciones/{excepcionId} (quitar excepción)
@@ -429,7 +441,7 @@ namespace FluentisCore.Controllers
             var excepcionesRestantes = await _context.Excepciones
                 .Where(e => e.PasoSolicitudId == id).ToListAsync();
             var paso = await _context.PasosSolicitud.FindAsync(id);
-            if (excepcionesRestantes.Count == 0 && paso.Estado == EstadoPasoSolicitud.Excepcion)
+            if (paso != null && excepcionesRestantes.Count == 0 && paso.Estado == EstadoPasoSolicitud.Excepcion)
             {
                 paso.Estado = EstadoPasoSolicitud.Pendiente; // Restaurar a pendiente como ejemplo
                 _context.Entry(paso).State = EntityState.Modified;
@@ -482,7 +494,8 @@ namespace FluentisCore.Controllers
             // Actualizar estado según regla de votación
             await UpdateEstadoPorVotacion(paso.IdPasoSolicitud);
 
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, paso);
+            var pasoDto3 = paso.ToFrontendDto();
+            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, pasoDto3);
         }
 
         // DELETE: api/pasosolicitudes/{id}/decisiones/{decisionId} (quitar decisión)

@@ -218,6 +218,38 @@ namespace FluentisCore.Controllers
             return NoContent();
         }
 
+        // GET: api/solicitudes/{id}/grupos-aprobacion
+        [HttpGet("{id}/grupos-aprobacion")]
+        public async Task<ActionResult<IEnumerable<RelacionGrupoAprobacionDto>>> GetGruposAprobacionBySolicitud(int id)
+        {
+            // Validate solicitud exists
+            var exists = await _context.Solicitudes.AnyAsync(s => s.IdSolicitud == id);
+            if (!exists) return NotFound();
+
+            var relaciones = await _context.RelacionesGrupoAprobacion
+                .Where(r => r.SolicitudId == id)
+                .Include(r => r.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .ToListAsync();
+
+            var dtos = relaciones.Select(r => r.ToDto()).ToList();
+            return Ok(dtos);
+        }
+
+        // GET: api/solicitudes/{id}/grupo-aprobacion (primer relación si existe)
+        [HttpGet("{id}/grupo-aprobacion")]
+        public async Task<ActionResult<RelacionGrupoAprobacionDto>> GetFirstGrupoAprobacionBySolicitud(int id)
+        {
+            var relacion = await _context.RelacionesGrupoAprobacion
+                .Where(r => r.SolicitudId == id)
+                .Include(r => r.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .FirstOrDefaultAsync();
+
+            if (relacion == null) return NotFound();
+            return Ok(relacion.ToDto());
+        }
+
         // POST: api/solicitudes/5/inputs
         [HttpPost("{id}/inputs")]
     public async Task<ActionResult<RelacionInputDto>> AddInputToSolicitud(int id, [FromBody] RelacionInputCreateDto inputDto)

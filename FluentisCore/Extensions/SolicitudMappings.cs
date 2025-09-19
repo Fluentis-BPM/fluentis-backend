@@ -20,8 +20,9 @@ namespace FluentisCore.Extensions
                 Solicitante = s.Solicitante?.ToMiniDto(),
                 FechaCreacion = s.FechaCreacion,
                 Estado = s.Estado,
-                Inputs = s.Inputs?.Select(i => i.ToDto()).ToList() ?? new(),
-                GruposAprobacion = s.GruposAprobacion?.Select(g => g.ToDto()).ToList() ?? new()
+                // Evitar NRE cuando EF no ha materializado colecciones: comprobar null antes de ToList
+                Inputs = s.Inputs != null ? s.Inputs.Select(i => i.ToDto()).ToList() : new(),
+                GruposAprobacion = s.GruposAprobacion != null ? s.GruposAprobacion.Select(g => g.ToDto()).ToList() : new()
             };
         }
 
@@ -43,7 +44,8 @@ namespace FluentisCore.Extensions
                 GrupoAprobacionId = r.GrupoAprobacionId,
                 PasoSolicitudId = r.PasoSolicitudId,
                 SolicitudId = r.SolicitudId,
-                Decisiones = r.Decisiones?.Select(d => d.ToDto()).ToList() ?? new()
+                // Evitar NRE al convertir cuando la colección aún es null
+                Decisiones = r.Decisiones != null ? r.Decisiones.Select(d => d.ToDto()).ToList() : new()
             };
         }
 

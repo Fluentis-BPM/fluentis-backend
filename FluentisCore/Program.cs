@@ -77,6 +77,8 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 builder.Services.AddScoped<WorkflowInitializationService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
+builder.Services.AddHttpContextAccessor();
 
 
 // Configura Microsoft Graph
@@ -112,12 +114,50 @@ builder.Services.AddDbContext<FluentisContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Fluentis API",
+        Version = "v1",
+        Description = "API de Fluentis con soporte para plantillas de solicitudes"
+    });
+
+    // JWT Bearer auth in Swagger UI
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Ingrese el token JWT con el esquema Bearer. Ejemplo: Bearer {token}",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+    };
+    c.AddSecurityDefinition("Bearer", securityScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { securityScheme, Array.Empty<string>() }
+    });
+
+    // XML comments
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
+});
 
 var app = builder.Build();
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Fluentis API v1");
+    // Restaurar ruta clásica de Swagger UI
+    c.RoutePrefix = "swagger";
+});
 app.UseCors("AllowFrontend");
 app.UseAuthentication(); // Always enable authentication
 app.UseAuthorization();
@@ -130,6 +170,9 @@ using (var scope = app.Services.CreateScope())
 
     var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
 
+    // Siempre asegurar catálogo de Inputs, independientemente de datos de ejemplo.
+    initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
+
     var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
     if (File.Exists(jsonPath))
     {
@@ -140,7 +183,6 @@ using (var scope = app.Services.CreateScope())
         initDB.InsertMockUsers(); // Insert mock users with relationships
         initDB.InsertMockApprovalGroups(); // Insert approval groups
         initDB.InsertMockUserGroupRelations(); // Link users to approval groups
-        initDB.InsertMockInputs(); // Insert input types
         initDB.InsertMockWorkflows(); // Insert sample workflows
         Console.WriteLine("✅ Base de datos inicializada con datos de prueba completos");
         Console.WriteLine("👥 Usuarios creados con relaciones a departamentos, roles y cargos");
