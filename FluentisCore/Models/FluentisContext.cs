@@ -4,6 +4,7 @@ using FluentisCore.Models.WorkflowManagement;
 using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.MetricsAndReportsManagement;
+using FluentisCore.Models.TemplateManagement;
 using FluentisCore.Models.ProposalAndVotingManagement;
 using FluentisCore.Models.BackupAndIncidentManagement;
 
@@ -59,6 +60,10 @@ namespace FluentisCore.Models
         // Tablas de BackupAndIncidentManagement
         public DbSet<Backup> Backups { get; set; }
         public DbSet<Incidente> Incidentes { get; set; }
+
+    // Tablas de TemplateManagement
+    public DbSet<PlantillaSolicitud> PlantillasSolicitud { get; set; }
+    public DbSet<PlantillaInput> PlantillasInput { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -243,6 +248,26 @@ namespace FluentisCore.Models
                 entity.HasOne(c => c.PasoDestino)
                     .WithMany()
                     .HasForeignKey(c => c.PasoDestinoId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // ----------------------------------------------------------
+            // TemplateManagement configuration
+            // ----------------------------------------------------------
+            modelBuilder.Entity<PlantillaSolicitud>(entity =>
+            {
+                entity.HasMany(p => p.Inputs)
+                    .WithOne(i => i.Plantilla)
+                    .HasForeignKey(i => i.PlantillaSolicitudId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PlantillaInput>(entity =>
+            {
+                // Ensure Input relation doesn't cascade delete templates when inputs are removed
+                entity.HasOne(pi => pi.Input)
+                    .WithMany()
+                    .HasForeignKey(pi => pi.InputId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
         }
