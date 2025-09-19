@@ -104,7 +104,7 @@ namespace FluentisCore.Controllers{
                 user = new Usuario
                 {
                     Oid = oid,
-                    Email = emailFromClaims ?? graphUser.Mail ?? graphUser.UserPrincipalName ?? "sin-correo",
+                    Email = emailFromClaims ?? graphUser.Mail ?? graphUser.UserPrincipalName ?? "mierda no sirve",
                     Nombre = graphUser.DisplayName ?? "Unknown",
                     DepartamentoId = departamento?.IdDepartamento,
                     CargoId = cargo?.IdCargo,
@@ -131,7 +131,6 @@ namespace FluentisCore.Controllers{
                 // Usuario ya existe: actualizar email si está vacío o es un placeholder
                 var emailIsPlaceholder = string.IsNullOrWhiteSpace(user.Email)
                     || user.Email.Equals("mierda no sirve", StringComparison.OrdinalIgnoreCase)
-                    || user.Email.Equals("sin-correo", StringComparison.OrdinalIgnoreCase);
                 if (emailIsPlaceholder && !string.IsNullOrWhiteSpace(emailFromClaims))
                 {
                     user.Email = emailFromClaims;
