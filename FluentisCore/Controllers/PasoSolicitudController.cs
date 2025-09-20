@@ -11,6 +11,7 @@ using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.MetricsAndReportsManagement;
 using FluentisCore.Extensions;
+using System.Security.Claims;
 
 namespace FluentisCore.Controllers
 {
@@ -156,7 +157,7 @@ namespace FluentisCore.Controllers
             }
 
             // Validar estado según tipo_paso
-            var validStates = new[] { EstadoPasoSolicitud.Pendiente, EstadoPasoSolicitud.Aprobado, 
+            var validStates = new[] { EstadoPasoSolicitud.Pendiente, EstadoPasoSolicitud.Aprobado,
                                     EstadoPasoSolicitud.Rechazado, EstadoPasoSolicitud.Excepcion };
             if (paso.TipoPaso == TipoPaso.Ejecucion)
             {
@@ -546,7 +547,7 @@ namespace FluentisCore.Controllers
         }
 
         // POST: api/pasosolicitudes/{id}/conexiones (agregar UNA conexión sin reemplazar las existentes)
-       
+
 
         [HttpPost("{id}/conexiones")]
         public async Task<IActionResult> AddConnectionToPasoSolicitud(int id, [FromBody] ConexionCreateDto dto)
@@ -724,6 +725,86 @@ namespace FluentisCore.Controllers
                 return NotFound();
             }
             return paso;
+        }
+
+        // GET: api/pasosolicitudes/usuario/{usuarioId} (obtener pasos por usuario)
+        [HttpGet("usuario/{usuarioId}")]
+        public async Task<ActionResult<IEnumerable<PasoSolicitudFrontendDto>>> GetPasosByUsuario(int usuarioId, [FromQuery] string? tipoPaso = null, [FromQuery] EstadoPasoSolicitud? estado = null, [FromQuery] DateTime? fechaDesde = null, [FromQuery] DateTime? fechaHasta = null)
+        {
+            // Obtener OID del usuario actual desde el token JWT (claim estándar de Azure AD)
+            var oidClaim = User.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier");
+            if (oidClaim == null)
+            {
+                return Unauthorized("Token inválido: OID no encontrado.");
+            }
+            var oid = oidClaim.Value;
+
+            // Buscar el usuario en la DB usando OID para obtener IdUsuario
+            var currentUser = await _context.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Oid == oid);
+            if (currentUser == null)
+            {
+                return Unauthorized("Usuario no encontrado en la base de datos.");
+            }
+            var currentUserId = currentUser.IdUsuario;
+            bool isAdmin = currentUser.Rol?.Nombre == "Administrador";
+
+            if (!isAdmin && currentUserId != usuarioId)
+            {
+                return Forbid("No tienes permiso para ver pasos de otros usuarios.");
+            }
+
+            // Resto del código permanece igual...
+            // Query base: pasos de tipo Ejecución o Aprobación
+            var query = _context.PasosSolicitud
+                .Where(p => p.TipoPaso == TipoPaso.Ejecucion || p.TipoPaso == TipoPaso.Aprobacion)
+                .Include(p => p.FlujoActivo)
+                .Include(p => p.RelacionesInput)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                    .ThenInclude(rga => rga.GrupoAprobacion)
+                        .ThenInclude(ga => ga.RelacionesUsuarioGrupo)
+                .Include(p => p.Comentarios)
+                .Include(p => p.Excepciones)
+                .AsQueryable();
+
+            // Filtrar por asignación al usuario
+            query = query.Where(p =>
+                (p.TipoPaso == TipoPaso.Ejecucion && p.ResponsableId == usuarioId) ||
+                (p.TipoPaso == TipoPaso.Aprobacion &&
+                 p.RelacionesGrupoAprobacion != null &&
+                 p.RelacionesGrupoAprobacion.GrupoAprobacion.RelacionesUsuarioGrupo.Any(rug => rug.UsuarioId == usuarioId))
+            );
+
+            // Filtros opcionales (tipoPaso, estado, fechas)
+            if (!string.IsNullOrEmpty(tipoPaso))
+            {
+                if (tipoPaso.ToLower() == "ejecucion")
+                    query = query.Where(p => p.TipoPaso == TipoPaso.Ejecucion);
+                else if (tipoPaso.ToLower() == "aprobacion")
+                    query = query.Where(p => p.TipoPaso == TipoPaso.Aprobacion);
+                else
+                    return BadRequest("TipoPaso inválido. Usa 'ejecucion' o 'aprobacion'.");
+            }
+
+            if (estado.HasValue)
+            {
+                query = query.Where(p => p.Estado == estado.Value);
+            }
+
+            if (fechaDesde.HasValue)
+            {
+                query = query.Where(p => p.FechaInicio >= fechaDesde.Value);
+            }
+
+            if (fechaHasta.HasValue)
+            {
+                query = query.Where(p => p.FechaInicio <= fechaHasta.Value);
+            }
+
+            // Ordenar por fecha de inicio descendente
+            query = query.OrderByDescending(p => p.FechaInicio);
+
+            var pasos = await query.ToListAsync();
+            return pasos.Select(p => p.ToFrontendDto()).ToList();
         }
     }
 }
