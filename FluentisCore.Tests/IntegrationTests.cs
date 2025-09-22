@@ -255,4 +255,80 @@ public class IntegrationTests : PlaywrightTest
 
         Assert.True(createdId > 0, "Should return a valid solicitud ID");
     }
+
+    /// <summary>
+    /// F-XX: Crear plantilla e instanciar solicitud desde plantilla.
+    /// </summary>
+    [Fact]
+    public async Task CreateTemplateAndInstantiateSolicitud()
+    {
+        var apiContext = await GetAuthenticatedApiContextAsync();
+
+        // Create a simple template referencing an existing Input (assume Id 1 exists from DBInit)
+        var plantillaResponse = await apiContext.PostAsync("/api/plantillas", new()
+        {
+            DataObject = new
+            {
+                Nombre = "Plantilla API Test",
+                Descripcion = "Creada por test",
+                FlujoBaseId = (int?)null,
+                GrupoAprobacionId = (int?)null,
+                Inputs = new[]
+                {
+                    new { InputId = 1, Nombre = "Campo 1", PlaceHolder = "Ingrese...", Requerido = true, ValorPorDefecto = "valor" }
+                }
+            }
+        });
+
+        if (!plantillaResponse.Ok)
+        {
+            var responseBody = await plantillaResponse.TextAsync();
+            Assert.True(plantillaResponse.Ok, $"Creación de plantilla falló: {plantillaResponse.Status}. Cuerpo: {responseBody}");
+        }
+
+        var plantillaJson = await plantillaResponse.JsonAsync();
+        var plantillaId = plantillaJson?.GetProperty("idPlantilla").GetInt32() ?? 0;
+        Assert.True(plantillaId > 0);
+
+        // Create a user to own the solicitud
+        var userResponse = await apiContext.PostAsync("/api/usuarios", new()
+        {
+            DataObject = new
+            {
+                Nombre = $"Usuario Plantilla {DateTime.Now:yyyyMMddHHmmss}",
+                Email = $"tpl{DateTime.Now:yyyyMMddHHmmss}@example.com",
+                DepartamentoId = 1,
+                RolId = 1,
+                CargoId = 1,
+                Oid = $"oid_tpl_{DateTime.Now:yyyyMMddHHmmss}"
+            }
+        });
+        Assert.True(userResponse.Ok, $"User creation failed with status: {userResponse.Status}");
+        var userJson = await userResponse.JsonAsync();
+        var uid = userJson?.GetProperty("idUsuario").GetInt32() ?? 0;
+        Assert.True(uid > 0);
+
+        // Instantiate solicitud from template
+        var instResponse = await apiContext.PostAsync("/api/plantillas/instanciar-solicitud", new()
+        {
+            DataObject = new
+            {
+                PlantillaId = plantillaId,
+                SolicitanteId = uid,
+                Nombre = "Solicitud desde plantilla",
+                Descripcion = "Creada por test",
+                OverridesValores = new Dictionary<int, string> { { 1, "override" } }
+            }
+        });
+
+        if (!instResponse.Ok)
+        {
+            var responseBody = await instResponse.TextAsync();
+            Assert.True(instResponse.Ok, $"Instanciación de solicitud falló: {instResponse.Status}. Cuerpo: {responseBody}");
+        }
+
+        var solJson = await instResponse.JsonAsync();
+        var sid = solJson?.GetProperty("idSolicitud").GetInt32() ?? 0;
+        Assert.True(sid > 0);
+    }
 }

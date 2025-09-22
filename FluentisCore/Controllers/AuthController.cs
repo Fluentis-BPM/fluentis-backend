@@ -32,6 +32,9 @@ namespace FluentisCore.Controllers{
         try
         {
             var oid = User.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value;
+            var emailFromClaims = User.FindFirst("preferred_username")?.Value
+                ?? User.FindFirst("email")?.Value
+                ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn")?.Value;
             Console.WriteLine("User Claims:");
             foreach (var claim in User.Claims)
             {
@@ -101,7 +104,7 @@ namespace FluentisCore.Controllers{
                 user = new Usuario
                 {
                     Oid = oid,
-                    Email = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn")?.Value ?? "mierda no sirve",
+                    Email = emailFromClaims ?? graphUser.Mail ?? graphUser.UserPrincipalName ?? "mierda no sirve",
                     Nombre = graphUser.DisplayName ?? "Unknown",
                     DepartamentoId = departamento?.IdDepartamento,
                     CargoId = cargo?.IdCargo,
@@ -123,18 +126,31 @@ namespace FluentisCore.Controllers{
                         return BadRequest(new { Error = "No se pudo cargar el usuario en la base de datos." });
                     }
             }
+            else
+            {
+                // Usuario ya existe: actualizar email si está vacío o es un placeholder
+                var emailIsPlaceholder = string.IsNullOrWhiteSpace(user.Email)
+                    || user.Email.Equals("mierda no sirve", StringComparison.OrdinalIgnoreCase)
+                if (emailIsPlaceholder && !string.IsNullOrWhiteSpace(emailFromClaims))
+                {
+                    user.Email = emailFromClaims;
+                    _context.Usuarios.Update(user);
+                    await _context.SaveChangesAsync();
+                }
+            }
 
-            // Devuelve la información del usuario
+            // Devuelve la información del usuario (camelCase + idUsuario)
             return Ok(new
             {
-                User = new
+                user = new
                 {
-                    user.Oid,
-                    user.Email,
-                    user.Nombre,
-                    Cargo = user.Cargo?.Nombre,
-                    Departamento = user.Departamento?.Nombre,
-                    Rol = user.Rol?.Nombre,
+                    idUsuario = user.IdUsuario,
+                    oid = user.Oid,
+                    email = user.Email,
+                    nombre = user.Nombre,
+                    cargoNombre = user.Cargo?.Nombre,
+                    departamentoNombre = user.Departamento?.Nombre,
+                    rolNombre = user.Rol?.Nombre,
                 }
             });
         }
