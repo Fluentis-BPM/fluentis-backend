@@ -756,15 +756,82 @@ namespace FluentisCore.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<PasoSolicitud>> GetPasoSolicitud(int id)
+        public async Task<ActionResult<PasoSolicitudFrontendDto>> GetPasoSolicitud(int id)
         {
-            var paso = await _context.PasosSolicitud.FindAsync(id);
+            // Incluir relaciones necesarias para armar el DTO plano
+            var paso = await _context.PasosSolicitud
+                .Include(p => p.RelacionesInput)
+                    .ThenInclude(ri => ri.Input) // Necesario para que la navegación Input no sea null (sin lazy loading)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                    .ThenInclude(r => r.GrupoAprobacion)
+                        .ThenInclude(g => g.RelacionesUsuarioGrupo)
+                .Include(p => p.Comentarios)
+                .Include(p => p.Excepciones)
+                .FirstOrDefaultAsync(p => p.IdPasoSolicitud == id);
+
             if (paso == null)
             {
                 return NotFound();
             }
-            return paso;
+
+            return paso.ToFrontendDto();
         }
+
+        // GET: api/pasosolicitudes/{id}/inputs (obtener todos los inputs asociados a un paso)
+        [HttpGet("{id}/inputs")]
+        public async Task<ActionResult<IEnumerable<RelacionInputFrontendDto>>> GetInputsForPaso(int id, [FromQuery] bool debug = false)
+        {
+            var existePaso = await _context.PasosSolicitud.AnyAsync(p => p.IdPasoSolicitud == id);
+            if (!existePaso)
+            {
+                return NotFound("Paso no encontrado.");
+            }
+
+            // Explicit join to ensure we get the TipoInput information
+            var query = from r in _context.RelacionesInput
+                        join i in _context.Inputs on r.InputId equals i.IdInput
+                        where r.PasoSolicitudId == id
+                        select new { Relacion = r, Input = i };
+
+            var materialized = await query.ToListAsync();
+
+            if (debug)
+            {
+                Console.WriteLine($"[DEBUG] PasoSolicitud {id} -> {materialized.Count} inputs encontrados");
+                foreach (var item in materialized)
+                {
+                    Console.WriteLine($"[DEBUG] RelacionInput Id={item.Relacion.IdRelacion} InputId={item.Relacion.InputId} EnumValue={(int)item.Input.TipoInput} EnumName={item.Input.TipoInput} Mapped={MapTipoInputController(item.Input.TipoInput)}");
+                }
+            }
+
+            var inputsWithTypes = materialized.Select(item => new RelacionInputFrontendDto
+            {
+                IdRelacion = item.Relacion.IdRelacion,
+                InputId = item.Relacion.InputId,
+                Nombre = item.Relacion.Nombre,
+                PlaceHolder = item.Relacion.PlaceHolder,
+                Requerido = item.Relacion.Requerido,
+                Valor = item.Relacion.Valor,
+                TipoInput = MapTipoInputController(item.Input.TipoInput),
+                PasoSolicitudId = item.Relacion.PasoSolicitudId,
+                SolicitudId = item.Relacion.SolicitudId
+            }).ToList();
+
+            return inputsWithTypes;
+        }
+
+        private string MapTipoInputController(TipoInput tipo)
+            => tipo switch
+            {
+                TipoInput.TextoCorto => "texto_corto",
+                TipoInput.TextoLargo => "texto_largo", 
+                TipoInput.Combobox => "combobox",
+                TipoInput.MultipleCheckbox => "multiple_checkbox",
+                TipoInput.Date => "date",
+                TipoInput.Number => "number", 
+                TipoInput.Archivo => "archivo",
+                _ => "texto_corto"
+            };
 
         // GET: api/pasosolicitudes/usuario/{usuarioId} (obtener pasos por usuario)
         [HttpGet("usuario/{usuarioId}")]

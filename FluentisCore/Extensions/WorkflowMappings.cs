@@ -113,6 +113,7 @@ namespace FluentisCore.Extensions
                 PlaceHolder = model.PlaceHolder,
                 Requerido = model.Requerido,
                 Valor = model.Valor,
+                TipoInput = MapTipoInput(model.Input?.TipoInput ?? TipoInput.TextoCorto),
                 PasoSolicitudId = model.PasoSolicitudId,
                 SolicitudId = model.SolicitudId
             };
@@ -202,6 +203,19 @@ namespace FluentisCore.Extensions
                 ReglaAprobacion.PrimeraAprobacion => "individual",
                 ReglaAprobacion.Mayoria => "ancla",
                 _ => "individual"
+            };
+
+        private static string MapTipoInput(TipoInput tipo)
+            => tipo switch
+            {
+                TipoInput.TextoCorto => "texto_corto",
+                TipoInput.TextoLargo => "texto_largo",
+                TipoInput.Combobox => "combobox",
+                TipoInput.MultipleCheckbox => "multiple_checkbox",
+                TipoInput.Date => "date",
+                TipoInput.Number => "number",
+                TipoInput.Archivo => "archivo",
+                _ => "texto_corto"
             };
     }
 }
