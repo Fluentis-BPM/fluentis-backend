@@ -34,6 +34,7 @@ namespace FluentisCore.DTO
         [JsonPropertyName("placeholder")] public string? PlaceHolder { get; set; }
         [JsonPropertyName("requerido")] public bool Requerido { get; set; }
         [JsonPropertyName("valor")] public string? Valor { get; set; }
+        [JsonPropertyName("tipo_input")] public string TipoInput { get; set; } = string.Empty;
         [JsonPropertyName("paso_solicitud_id")] public int? PasoSolicitudId { get; set; }
         [JsonPropertyName("solicitud_id")] public int? SolicitudId { get; set; }
     }
