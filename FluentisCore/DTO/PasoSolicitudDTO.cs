@@ -15,6 +15,8 @@ namespace FluentisCore.DTO
         public string Nombre { get; set; }
         public ReglaAprobacion? ReglaAprobacion { get; set; } // Opcional para tipos Inicio y Fin
         public List<RelacionInputCreateDto>? Inputs { get; set; } // Incluye detalles al crear
+        public int? PosX { get; set; }
+        public int? PosY { get; set; }
     }
 
     public class PasoSolicitudUpdateDto
@@ -23,6 +25,8 @@ namespace FluentisCore.DTO
         public DateTime? FechaFin { get; set; }
         public int? ResponsableId { get; set; }
         public string? Nombre { get; set; }
+        public int? PosX { get; set; }
+        public int? PosY { get; set; }
     }
 
 

@@ -49,6 +49,8 @@ namespace FluentisCore.Controllers
                 TipoPaso = dto.TipoPaso,
                 Estado = dto.Estado,
                 Nombre = dto.Nombre,
+                PosX = dto.PosX ?? 0,
+                PosY = dto.PosY ?? 0,
                 ReglaAprobacion = dto.TipoPaso == TipoPaso.Aprobacion ? dto.ReglaAprobacion : null,
                 FechaInicio = DateTime.UtcNow
             };
@@ -175,6 +177,11 @@ namespace FluentisCore.Controllers
                 paso.ResponsableId = dto.ResponsableId;
             }
             paso.Nombre = dto.Nombre ?? paso.Nombre;
+            if (dto.PosX.HasValue && dto.PosY.HasValue)
+            {
+                paso.PosX = dto.PosX.Value;
+                paso.PosY = dto.PosY.Value;
+            }
 
             // Recalcular tipo_flujo si hay cambios en caminos (simplificado, asumiendo actualización externa)
             paso.TipoFlujo = await GetTipoFlujo(id);
@@ -339,6 +346,38 @@ namespace FluentisCore.Controllers
             // Map to DTO and return 201 pointing to the paso resource
             var resultDto = relacion.ToDto();
             return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, resultDto);
+        }
+
+        // DELETE: api/pasosolicitudes/{id}/grupoaprobacion (eliminar relación de grupo de aprobación)
+        [HttpDelete("{id}/grupoaprobacion")]
+        public async Task<IActionResult> EliminarRelacionPasoGrupoAprobacion(int id)
+        {
+            var paso = await _context.PasosSolicitud
+                .Include(p => p.RelacionesGrupoAprobacion)
+                .ThenInclude(r => r.Decisiones)
+                .FirstOrDefaultAsync(p => p.IdPasoSolicitud == id);
+
+            if (paso == null)
+            {
+                return NotFound("Paso no encontrado.");
+            }
+
+            var relacion = paso.RelacionesGrupoAprobacion;
+            if (relacion == null)
+            {
+                return NoContent(); // Idempotente: nada que eliminar
+            }
+
+            // Eliminar decisiones asociadas para evitar conflictos de FK
+            if (relacion.Decisiones?.Any() == true)
+            {
+                _context.DecisionesUsuario.RemoveRange(relacion.Decisiones);
+            }
+
+            _context.RelacionesGrupoAprobacion.Remove(relacion);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
 
         // POST: api/pasosolicitudes/{id}/comentarios (agregar comentario)
