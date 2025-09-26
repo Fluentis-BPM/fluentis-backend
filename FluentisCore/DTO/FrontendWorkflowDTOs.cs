@@ -87,8 +87,8 @@ namespace FluentisCore.DTO
         [JsonPropertyName("nombre")] public string? Nombre { get; set; }
         [JsonPropertyName("tipo_flujo")] public string TipoFlujo { get; set; } = "normal"; // 'normal' | 'bifurcacion' | 'union'
         [JsonPropertyName("regla_aprobacion")] public string? ReglaAprobacion { get; set; } // 'unanime' | 'individual' | 'ancla'
-        [JsonPropertyName("posicion_x")] public int? PosicionX { get; set; }
-        [JsonPropertyName("posicion_y")] public int? PosicionY { get; set; }
+        [JsonPropertyName("posicion_x")] public int? PosX { get; set; }
+        [JsonPropertyName("posicion_y")] public int? PosY { get; set; }
         [JsonPropertyName("relacionesInput")] public List<RelacionInputFrontendDto> RelacionesInput { get; set; } = new();
         [JsonPropertyName("relacionesGrupoAprobacion")] public List<RelacionGrupoAprobacionFrontendDto> RelacionesGrupoAprobacion { get; set; } = new();
         [JsonPropertyName("comentarios")] public List<ComentarioFrontendDto> Comentarios { get; set; } = new();

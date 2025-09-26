@@ -219,6 +219,9 @@ namespace FluentisCore.Models.WorkflowManagement
         public virtual ICollection<Comentario> Comentarios { get; set; }
         public virtual ICollection<Excepcion> Excepciones { get; set; }
         
+        public int PosX { get; set; }
+        public int PosY { get; set; }
+
         public PasoSolicitud()
         {
             RelacionesInput = new List<RelacionInput>();

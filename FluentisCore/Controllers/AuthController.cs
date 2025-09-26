@@ -130,7 +130,7 @@ namespace FluentisCore.Controllers{
             {
                 // Usuario ya existe: actualizar email si está vacío o es un placeholder
                 var emailIsPlaceholder = string.IsNullOrWhiteSpace(user.Email)
-                    || user.Email.Equals("mierda no sirve", StringComparison.OrdinalIgnoreCase)
+                    || user.Email.Equals("mierda no sirve", StringComparison.OrdinalIgnoreCase);
                 if (emailIsPlaceholder && !string.IsNullOrWhiteSpace(emailFromClaims))
                 {
                     user.Email = emailFromClaims;

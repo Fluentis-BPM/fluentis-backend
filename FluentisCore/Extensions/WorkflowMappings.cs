@@ -84,7 +84,8 @@ namespace FluentisCore.Extensions
                 Nombre = paso.Nombre,
                 TipoFlujo = MapTipoFlujo(paso.TipoFlujo),
                 ReglaAprobacion = paso.ReglaAprobacion.HasValue ? MapReglaAprobacion(paso.ReglaAprobacion.Value) : null,
-                // Posiciones no existen en modelo actual; mantenemos null
+                PosX = paso.PosX,
+                PosY = paso.PosY,
                 RelacionesInput = paso.RelacionesInput != null ? paso.RelacionesInput.Select(ri => ri.ToFrontendDto()).ToList() : new(),
                 RelacionesGrupoAprobacion = paso.RelacionesGrupoAprobacion != null
                     ? new List<RelacionGrupoAprobacionFrontendDto>
