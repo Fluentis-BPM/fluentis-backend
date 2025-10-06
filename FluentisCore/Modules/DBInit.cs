@@ -278,6 +278,7 @@ namespace FluentisCore.Modules.DBInit
                 { TipoInput.TextoLargo, false },
                 { TipoInput.Combobox, true },
                 { TipoInput.MultipleCheckbox, true },
+                { TipoInput.RadioGroup, false },
                 { TipoInput.Date, false },
                 { TipoInput.Number, false },
                 { TipoInput.Archivo, false },

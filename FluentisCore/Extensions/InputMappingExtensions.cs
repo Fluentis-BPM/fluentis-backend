@@ -1,5 +1,6 @@
 using FluentisCore.DTO;
 using FluentisCore.Models.InputAndApprovalManagement;
+using System.Text.Json;
 
 namespace FluentisCore.Extensions
 {
@@ -26,9 +27,21 @@ namespace FluentisCore.Extensions
                 InputValue = model.Input != null ? new InputValueDto
                 {
                     TipoInput = model.Input.TipoInput,
-                    RawValue = model.Valor
+                    RawValue = model.Valor,
+                    Options = !string.IsNullOrWhiteSpace(model.OptionsJson) ?
+                        SafeDeserializeOptions(model.OptionsJson) : null
                 } : null
             };
+        }
+
+        private static List<string>? SafeDeserializeOptions(string json)
+        {
+            try
+            {
+                var list = JsonSerializer.Deserialize<List<string>>(json);
+                return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
+            }
+            catch { return null; }
         }
 
         /// <summary>
@@ -84,6 +97,7 @@ namespace FluentisCore.Extensions
                     TipoInput.Date => DateTime.TryParse(inputValue.RawValue, out _),
                     TipoInput.Number => decimal.TryParse(inputValue.RawValue, out _),
                     TipoInput.Combobox => true, // Ya validamos que no es null/empty arriba
+                    TipoInput.RadioGroup => true,
                     TipoInput.MultipleCheckbox => IsValidJsonArray(inputValue.RawValue),
                     TipoInput.Archivo => IsValidFileInfo(inputValue.RawValue),
                     _ => true

@@ -5,6 +5,7 @@ using FluentisCore.Models.InputAndApprovalManagement;
 using FluentisCore.Models.TemplateManagement;
 using FluentisCore.Models.WorkflowManagement;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace FluentisCore.Services
 {
@@ -47,19 +48,26 @@ namespace FluentisCore.Services
 
         public async Task<PlantillaSolicitudDto> CreateAsync(PlantillaSolicitudCreateDto dto)
         {
+            Console.WriteLine("[TemplateService] CreateAsync recibido payload: " + System.Text.Json.JsonSerializer.Serialize(dto));
             // Validaciones previas para evitar errores de FK en SaveChanges
             if (dto.GrupoAprobacionId.HasValue)
             {
                 var existsGrupo = await _context.GruposAprobacion.AnyAsync(g => g.IdGrupo == dto.GrupoAprobacionId.Value);
                 if (!existsGrupo)
+                {
+                    Console.WriteLine($"[TemplateService] GrupoAprobacionId inexistente: {dto.GrupoAprobacionId.Value}");
                     throw new InvalidOperationException($"GrupoAprobacionId {dto.GrupoAprobacionId.Value} no existe");
+                }
             }
 
             if (dto.FlujoBaseId.HasValue)
             {
                 var existsFlujo = await _context.FlujosAprobacion.AnyAsync(f => f.IdFlujo == dto.FlujoBaseId.Value);
                 if (!existsFlujo)
+                {
+                    Console.WriteLine($"[TemplateService] FlujoBaseId inexistente: {dto.FlujoBaseId.Value}");
                     throw new InvalidOperationException($"FlujoBaseId {dto.FlujoBaseId.Value} no existe");
+                }
             }
 
             if (dto.Inputs is { Count: > 0 })
@@ -68,7 +76,10 @@ namespace FluentisCore.Services
                 var existentes = await _context.Inputs.Where(i => inputIds.Contains(i.IdInput)).Select(i => i.IdInput).ToListAsync();
                 var faltantes = inputIds.Except(existentes).ToList();
                 if (faltantes.Count > 0)
+                {
+                    Console.WriteLine($"[TemplateService] Inputs faltantes: {string.Join(", ", faltantes)}");
                     throw new InvalidOperationException($"Algunos InputId no existen: {string.Join(", ", faltantes)}");
+                }
             }
 
             var plantilla = new PlantillaSolicitud
@@ -90,7 +101,8 @@ namespace FluentisCore.Services
                         Nombre = i.Nombre,
                         PlaceHolder = i.PlaceHolder,
                         Requerido = i.Requerido,
-                        ValorPorDefecto = i.ValorPorDefecto
+                        ValorPorDefecto = i.ValorPorDefecto,
+                        OpcionesJson = (i.Opciones != null && i.Opciones.Any()) ? JsonSerializer.Serialize(i.Opciones) : null
                     });
                 }
             }
@@ -102,6 +114,7 @@ namespace FluentisCore.Services
 
         public async Task<PlantillaSolicitudDto?> UpdateAsync(int id, PlantillaSolicitudUpdateDto dto)
         {
+            Console.WriteLine($"[TemplateService] UpdateAsync id={id} payload: " + System.Text.Json.JsonSerializer.Serialize(dto));
             var plantilla = await _context.PlantillasSolicitud
                 .Include(p => p.Inputs)
                 .FirstOrDefaultAsync(p => p.IdPlantilla == id);
@@ -149,7 +162,8 @@ namespace FluentisCore.Services
                         Nombre = i.Nombre,
                         PlaceHolder = i.PlaceHolder,
                         Requerido = i.Requerido,
-                        ValorPorDefecto = i.ValorPorDefecto
+                        ValorPorDefecto = i.ValorPorDefecto,
+                        OpcionesJson = (i.Opciones != null && i.Opciones.Any()) ? JsonSerializer.Serialize(i.Opciones) : null
                     });
                 }
             }
@@ -243,7 +257,8 @@ namespace FluentisCore.Services
                     Nombre = pin.Nombre,
                     PlaceHolder = pin.PlaceHolder ?? string.Empty,
                     Requerido = pin.Requerido,
-                    Valor = valor ?? string.Empty
+                    Valor = valor ?? string.Empty,
+                    OptionsJson = pin.OpcionesJson
                 });
             }
             if (inputsRelacion.Count > 0)

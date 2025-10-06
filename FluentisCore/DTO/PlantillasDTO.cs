@@ -11,6 +11,7 @@ namespace FluentisCore.DTO
         public string? PlaceHolder { get; set; }
         public bool Requerido { get; set; }
         public string? ValorPorDefecto { get; set; }
+        public List<string>? Opciones { get; set; }
     }
 
     public class PlantillaSolicitudDto
@@ -39,6 +40,7 @@ namespace FluentisCore.DTO
         public bool Requerido { get; set; }
 
         public string? ValorPorDefecto { get; set; }
+        public List<string>? Opciones { get; set; }
     }
 
     public class PlantillaSolicitudCreateDto

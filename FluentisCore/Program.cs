@@ -8,6 +8,7 @@ using Azure.Identity;
 using Microsoft.Graph;
 using FluentisCore.Modules.DBInit;
 using FluentisCore.Services;
+using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,6 +105,9 @@ builder.Services.AddScoped<GraphServiceClient>(serviceProvider =>
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
+    // Registrar convertidor custom para TipoInput (alias resiliente)
+    options.JsonSerializerOptions.Converters.Add(new FluentisCore.Converters.TipoInputJsonConverter());
+    // Mantener conversión general de enums como string
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     // Uniformizar convenciones de nombres a camelCase para el frontend
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
@@ -166,12 +170,72 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FluentisContext>();
-    db.Database.Migrate();
+    var skipMigrations = Environment.GetEnvironmentVariable("SKIP_DB_MIGRATIONS") == "1";
+    if (skipMigrations)
+    {
+        Console.WriteLine("⚠️ SKIP_DB_MIGRATIONS=1 detectado: se omiten migraciones y verificación de conexión.");
+    }
+    else
+    {
+        var maxRetries = 10;
+        var delayMs = 3000;
+        var attempt = 0;
+        var connected = false;
+        var cs = db.Database.GetConnectionString() ?? string.Empty;
+        try
+        {
+            var builderCs = new SqlConnectionStringBuilder(cs);
+            Console.WriteLine($"[DB] Intentando conectar a Server={builderCs.DataSource} Database={builderCs.InitialCatalog}");
+        }
+        catch { Console.WriteLine("[DB] ConnectionString parse falló (quizá vacía)"); }
+
+        while (attempt < maxRetries && !connected)
+        {
+            attempt++;
+            try
+            {
+                Console.WriteLine($"[DB] Conexión intento {attempt}/{maxRetries}...");
+                if (db.Database.CanConnect())
+                {
+                    Console.WriteLine("✅ Base de datos alcanzable. Ejecutando migraciones...");
+                    db.Database.Migrate();
+                    connected = true;
+                    Console.WriteLine("✅ Migraciones aplicadas.");
+                    break;
+                }
+                else
+                {
+                    throw new Exception("CanConnect() devolvió false");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Falló la conexión (intento {attempt}): {ex.Message}");
+                if (attempt < maxRetries)
+                {
+                    Console.WriteLine($"⏳ Reintentando en {delayMs/1000.0:F1}s...");
+                    Thread.Sleep(delayMs);
+                }
+            }
+        }
+
+        if (!connected)
+        {
+            Console.WriteLine("🚫 No se pudo conectar a la base de datos tras múltiples intentos. Si solo necesitas que la API arranque para frontend, exporta SKIP_DB_MIGRATIONS=1");
+        }
+    }
 
     var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
 
     // Siempre asegurar catálogo de Inputs, independientemente de datos de ejemplo.
-    initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
+    try
+    {
+        initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ No se pudieron insertar inputs iniciales: {ex.Message}");
+    }
 
     var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
     if (File.Exists(jsonPath))
