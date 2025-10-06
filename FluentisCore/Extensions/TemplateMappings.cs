@@ -1,5 +1,6 @@
 using FluentisCore.DTO;
 using FluentisCore.Models.TemplateManagement;
+using System.Text.Json;
 
 namespace FluentisCore.Extensions
 {
@@ -28,8 +29,20 @@ namespace FluentisCore.Extensions
                 Nombre = model.Nombre,
                 PlaceHolder = model.PlaceHolder,
                 Requerido = model.Requerido,
-                ValorPorDefecto = model.ValorPorDefecto
+                ValorPorDefecto = model.ValorPorDefecto,
+                Opciones = ParseOpciones(model.OpcionesJson)
             };
+        }
+
+        private static List<string>? ParseOpciones(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            try
+            {
+                var list = JsonSerializer.Deserialize<List<string>>(json);
+                return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
+            }
+            catch { return null; }
         }
     }
 }

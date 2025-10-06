@@ -7,7 +7,7 @@ using FluentisCore.Models.WorkflowManagement;
 
 namespace FluentisCore.Models.InputAndApprovalManagement
 {
-    public enum TipoInput { TextoCorto, TextoLargo, Combobox, MultipleCheckbox, Date, Number, Archivo }
+    public enum TipoInput { TextoCorto, TextoLargo, Combobox, MultipleCheckbox, RadioGroup, Date, Number, Archivo }
 
     public class Inputs
     {
@@ -43,6 +43,12 @@ namespace FluentisCore.Models.InputAndApprovalManagement
         public string PlaceHolder { get; set; }
 
         public bool Requerido { get; set; }
+
+    /// <summary>
+    /// Opciones serializadas (JSON array) para inputs basados en opciones (Combobox, MultipleCheckbox, RadioGroup)
+    /// Persistidas a nivel de relación para que una Solicitud conserve las opciones originales definidas en la plantilla
+    /// </summary>
+    public string? OptionsJson { get; set; }
 
         public int? PasoSolicitudId { get; set; }
 

@@ -54,6 +54,7 @@ namespace FluentisCore.DTO
                     TipoInput.Date => DateTime.TryParse(RawValue, out var date) ? date : RawValue,
                     TipoInput.Number => decimal.TryParse(RawValue, out var number) ? number : RawValue,
                     TipoInput.Combobox => RawValue,
+            TipoInput.RadioGroup => RawValue,
                     // Tolerar valores no JSON devolviendo el string crudo para evitar 500 en serialización
             TipoInput.MultipleCheckbox => string.IsNullOrEmpty(RawValue) ? null : (object?)TryDeserializeOrFallback<List<string>>(RawValue, RawValue) ?? RawValue,
             TipoInput.Archivo => string.IsNullOrEmpty(RawValue) ? null : (object?)TryDeserializeOrFallback<FileInfoDto>(RawValue, RawValue) ?? RawValue,
@@ -91,6 +92,7 @@ namespace FluentisCore.DTO
                 TipoInput.Date => value is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : value.ToString(),
                 TipoInput.Number => value.ToString(),
                 TipoInput.Combobox => value.ToString(),
+                TipoInput.RadioGroup => value.ToString(),
                 TipoInput.MultipleCheckbox => JsonSerializer.Serialize(value),
                 TipoInput.Archivo => JsonSerializer.Serialize(value),
                 _ => value.ToString()

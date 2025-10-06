@@ -77,5 +77,11 @@ namespace FluentisCore.Models.TemplateManagement
         /// Valor por defecto en formato string (se interpreta según el TipoInput)
         /// </summary>
         public string? ValorPorDefecto { get; set; }
+
+        /// <summary>
+        /// Opciones (JSON array) para tipos basados en lista: Combobox, MultipleCheckbox, RadioGroup
+        /// Se almacenan como JSON para simplicidad y flexibilidad.
+        /// </summary>
+        public string? OpcionesJson { get; set; }
     }
 }
