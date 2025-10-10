@@ -39,8 +39,48 @@ namespace FluentisCore.Controllers
                 .Include(s => s.GruposAprobacion)
                 .ThenInclude(rga => rga.Decisiones)
                 .ThenInclude(d => d.Usuario)
+                .OrderByDescending(s => s.FechaCreacion)
                 .ToListAsync();
             return list.Select(s => s.ToDto()).ToList();
+        }
+
+        // GET: api/solicitudes/usuario/{usuarioId}
+        [HttpGet("usuario/{usuarioId}")]
+        public async Task<ActionResult<IEnumerable<SolicitudDto>>> GetSolicitudesByUsuario(int usuarioId)
+        {
+            // Verificar que el usuario existe
+            var usuarioExists = await _context.Usuarios.AnyAsync(u => u.IdUsuario == usuarioId);
+            if (!usuarioExists)
+            {
+                return NotFound($"Usuario con ID {usuarioId} no encontrado.");
+            }
+
+            // Obtener solicitudes donde el usuario es el solicitante
+            var solicitudesComoSolicitante = _context.Solicitudes
+                .Where(s => s.SolicitanteId == usuarioId);
+
+            // Obtener solicitudes donde el usuario participa en el grupo de aprobación
+            var solicitudesComoAprobador = _context.Solicitudes
+                .Where(s => s.GruposAprobacion.Any(ga => 
+                    ga.GrupoAprobacion.RelacionesUsuarioGrupo.Any(rug => rug.UsuarioId == usuarioId)
+                ));
+
+            // Unir ambos conjuntos y eliminar duplicados
+            var solicitudes = await solicitudesComoSolicitante
+                .Union(solicitudesComoAprobador)
+                .Include(s => s.Solicitante)
+                .Include(s => s.FlujoBase)
+                .Include(s => s.Inputs)
+                .Include(s => s.GruposAprobacion)
+                    .ThenInclude(rga => rga.GrupoAprobacion)
+                    .ThenInclude(ga => ga.RelacionesUsuarioGrupo)
+                .Include(s => s.GruposAprobacion)
+                    .ThenInclude(rga => rga.Decisiones)
+                    .ThenInclude(d => d.Usuario)
+                .OrderByDescending(s => s.FechaCreacion)
+                .ToListAsync();
+
+            return solicitudes.Select(s => s.ToDto()).ToList();
         }
 
         // GET: api/solicitudes/5
