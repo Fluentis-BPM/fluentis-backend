@@ -1,0 +1,32 @@
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=ApiTestKey123!
+      - MSSQL_PID=Express              # Definir la edición de SQL Server
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql  # Persistencia de datos
+    healthcheck:
+      test: [ "CMD", "/opt/mssql-tools/bin/sqlcmd", "-U", "sa", "-P", "ApiTestKey123!", "-Q", "SELECT 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    depends_on:
+      - sqlserver
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=pollocampero;User Id=sa;Password=ApiTestKey123!;TrustServerCertificate=True;
+    ports:
+      - "8080:80"
+
+volumes:
+  sqlserver_data:

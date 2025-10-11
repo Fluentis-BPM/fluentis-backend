@@ -1,0 +1,35 @@
+IdRol,Nombre,DepartamentoId
+1,Gerente Comercial,1
+2,Gerente de País,1
+3,Visitador Médico,1
+4,Analista de Ventas,1
+5,Gerente de Producto,2
+6,Especialista Marketing Digital,2
+7,Coordinador Trade Marketing,2
+8,Jefe de Logística,3
+9,Coordinador de Inventarios,3
+10,Supervisor de Transporte,3
+11,Coordinador de Planeación,3
+12,Regente Farmacéutico,4
+13,Especialista Asuntos Regulatorios,4
+14,Gerente Financiero,5
+15,Contador General,5
+16,Analista de Costos y Precios,5
+17,Tesorero,5
+18,Controlador Financiero,5
+19,Jefe de RRHH,6
+20,Especialista en Capacitación,6
+21,Coordinador de Nómina,6
+22,Especialista de Contrataciones,6
+23,Jefe de TI,7
+24,Administrador de Sistemas,7
+25,Especialista en Cloud,7
+26,Especialista en Redes,7
+27,Especialista en Soporte Técnico,7
+28,Coordinador de Procesos,8
+29,Analista de Mejora Continua,8
+30,Especialista en BPM,8
+31,Gerente Médico,9
+32,Asesor Médico,9
+33,Coordinador de Información Científica,9
+34,Soporte Científico,9

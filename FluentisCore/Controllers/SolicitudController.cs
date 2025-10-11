@@ -1,0 +1,499 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using FluentisCore.Models;
+using FluentisCore.Models.WorkflowManagement;
+using FluentisCore.Models.InputAndApprovalManagement;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using FluentisCore.DTO;
+using FluentisCore.Auth;
+using FluentisCore.Extensions;
+using FluentisCore.Services;
+
+namespace FluentisCore.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [ConditionalAuthorize] // Changed from custom policy to same as other controllers
+    public class SolicitudesController : ControllerBase
+    {
+        private readonly FluentisContext _context;
+        private readonly WorkflowInitializationService _workflowInitializationService;
+
+        public SolicitudesController(FluentisContext context, WorkflowInitializationService workflowInitializationService)
+        {
+            _context = context;
+            _workflowInitializationService = workflowInitializationService;
+        }
+
+        // GET: api/solicitudes
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<SolicitudDto>>> GetSolicitudes()
+        {
+            var list = await _context.Solicitudes
+                .Include(s => s.Solicitante)
+                .Include(s => s.FlujoBase)
+                .Include(s => s.Inputs)
+                .Include(s => s.GruposAprobacion)
+                .ThenInclude(rga => rga.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .OrderByDescending(s => s.FechaCreacion)
+                .ToListAsync();
+            return list.Select(s => s.ToDto()).ToList();
+        }
+
+        // GET: api/solicitudes/usuario/{usuarioId}
+        [HttpGet("usuario/{usuarioId}")]
+        public async Task<ActionResult<IEnumerable<SolicitudDto>>> GetSolicitudesByUsuario(int usuarioId)
+        {
+            // Verificar que el usuario existe
+            var usuarioExists = await _context.Usuarios.AnyAsync(u => u.IdUsuario == usuarioId);
+            if (!usuarioExists)
+            {
+                return NotFound($"Usuario con ID {usuarioId} no encontrado.");
+            }
+
+            // Obtener solicitudes donde el usuario es el solicitante
+            var solicitudesComoSolicitante = _context.Solicitudes
+                .Where(s => s.SolicitanteId == usuarioId);
+
+            // Obtener solicitudes donde el usuario participa en el grupo de aprobación
+            var solicitudesComoAprobador = _context.Solicitudes
+                .Where(s => s.GruposAprobacion.Any(ga => 
+                    ga.GrupoAprobacion.RelacionesUsuarioGrupo.Any(rug => rug.UsuarioId == usuarioId)
+                ));
+
+            // Unir ambos conjuntos y eliminar duplicados
+            var solicitudes = await solicitudesComoSolicitante
+                .Union(solicitudesComoAprobador)
+                .Include(s => s.Solicitante)
+                .Include(s => s.FlujoBase)
+                .Include(s => s.Inputs)
+                .Include(s => s.GruposAprobacion)
+                    .ThenInclude(rga => rga.GrupoAprobacion)
+                    .ThenInclude(ga => ga.RelacionesUsuarioGrupo)
+                .Include(s => s.GruposAprobacion)
+                    .ThenInclude(rga => rga.Decisiones)
+                    .ThenInclude(d => d.Usuario)
+                .OrderByDescending(s => s.FechaCreacion)
+                .ToListAsync();
+
+            return solicitudes.Select(s => s.ToDto()).ToList();
+        }
+
+        // GET: api/solicitudes/5
+        [HttpGet("{id}")]
+    public async Task<ActionResult<SolicitudDto>> GetSolicitud(int id)
+        {
+            var solicitud = await _context.Solicitudes
+                .Include(s => s.Solicitante)
+                .Include(s => s.FlujoBase)
+                .Include(s => s.Inputs)
+                .Include(s => s.GruposAprobacion)
+                .ThenInclude(rga => rga.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .FirstOrDefaultAsync(s => s.IdSolicitud == id);
+
+            if (solicitud == null)
+            {
+                return NotFound();
+            }
+
+            return solicitud.ToDto();
+        }
+
+        // POST: api/solicitudes
+        [HttpPost]
+    public async Task<ActionResult<SolicitudDto>> CreateSolicitud([FromBody] SolicitudCreateDto solicitudDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var solicitud = new Solicitud
+            {
+                SolicitanteId = solicitudDto.SolicitanteId,
+                FlujoBaseId = solicitudDto.FlujoBaseId,
+                Nombre = solicitudDto.Nombre,
+                Descripcion = solicitudDto.Descripcion ?? string.Empty,
+                Estado = EstadoSolicitud.Pendiente,
+                FechaCreacion = DateTime.Now
+            };
+
+            // Agregar inputs (pueden estar vacíos inicialmente)
+            if (solicitudDto.Inputs != null)
+            {
+                solicitud.Inputs = new List<RelacionInput>();
+                foreach (var inputDto in solicitudDto.Inputs)
+                {
+                    var input = new RelacionInput
+                    {
+                        InputId = inputDto.InputId,
+                        Nombre = inputDto.Nombre,
+                        PlaceHolder = inputDto.PlaceHolder ?? string.Empty,
+                        Valor = inputDto.Valor?.RawValue ?? string.Empty, // Puede ser vacío
+                        Requerido = inputDto.Requerido,
+                        SolicitudId = solicitud.IdSolicitud // Se asignará después de guardar
+                    };
+                    solicitud.Inputs.Add(input);
+                }
+            }
+
+            // Asociar grupo de aprobación
+            if (solicitudDto.GrupoAprobacionId.HasValue)
+            {
+                solicitud.GruposAprobacion = new List<RelacionGrupoAprobacion>
+                {
+                    new RelacionGrupoAprobacion
+                    {
+                        GrupoAprobacionId = solicitudDto.GrupoAprobacionId.Value,
+                        SolicitudId = solicitud.IdSolicitud // Se asignará después de guardar
+                    }
+                };
+            }
+
+            _context.Solicitudes.Add(solicitud);
+            await _context.SaveChangesAsync();
+
+            // Actualizar relaciones con el IdSolicitud generado
+            if (solicitud.Inputs != null)
+            {
+                foreach (var input in solicitud.Inputs)
+                {
+                    input.SolicitudId = solicitud.IdSolicitud;
+                }
+            }
+            if (solicitud.GruposAprobacion != null)
+            {
+                foreach (var grupo in solicitud.GruposAprobacion)
+                {
+                    grupo.SolicitudId = solicitud.IdSolicitud;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, solicitud.ToDto());
+        }
+
+        // PUT: api/solicitudes/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateSolicitud(int id, [FromBody] SolicitudUpdateDto solicitudDto)
+        {
+            if (id != solicitudDto.IdSolicitud)
+            {
+                return BadRequest();
+            }
+
+            var solicitud = await _context.Solicitudes
+                .Include(s => s.GruposAprobacion)
+                .ThenInclude(rga => rga.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .FirstOrDefaultAsync(s => s.IdSolicitud == id);
+
+            if (solicitud == null)
+            {
+                return NotFound();
+            }
+
+            // Evaluar todas las decisiones de los grupos de aprobación
+            bool todasAprobadas = true;
+            bool algunaRechazada = false;
+
+            foreach (var grupoAprobacion in solicitud.GruposAprobacion)
+            {
+                var decisiones = grupoAprobacion.Decisiones;
+                if (decisiones.Any())
+                {
+                    if (!decisiones.All(d => d.Decision == true))
+                    {
+                        todasAprobadas = false;
+                    }
+                    if (decisiones.Any(d => d.Decision == false))
+                    {
+                        algunaRechazada = true;
+                        break; // Si hay un rechazo, no necesita seguir evaluando
+                    }
+                }
+                else
+                {
+                    todasAprobadas = false; // Si no hay decisiones, no está aprobado
+                }
+            }
+
+            if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
+            {
+                solicitud.Estado = EstadoSolicitud.Aprobado;
+            }
+            else if (algunaRechazada)
+            {
+                solicitud.Estado = EstadoSolicitud.Rechazado;
+            }
+            else
+            {
+                solicitud.Estado = solicitudDto.Estado; // Permite cambiar manualmente si no hay decisiones completas
+            }
+
+            _context.Entry(solicitud).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SolicitudExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        // GET: api/solicitudes/{id}/grupos-aprobacion
+        [HttpGet("{id}/grupos-aprobacion")]
+        public async Task<ActionResult<IEnumerable<RelacionGrupoAprobacionDto>>> GetGruposAprobacionBySolicitud(int id)
+        {
+            // Validate solicitud exists
+            var exists = await _context.Solicitudes.AnyAsync(s => s.IdSolicitud == id);
+            if (!exists) return NotFound();
+
+            var relaciones = await _context.RelacionesGrupoAprobacion
+                .Where(r => r.SolicitudId == id)
+                .Include(r => r.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .ToListAsync();
+
+            var dtos = relaciones.Select(r => r.ToDto()).ToList();
+            return Ok(dtos);
+        }
+
+        // GET: api/solicitudes/{id}/grupo-aprobacion (primer relación si existe)
+        [HttpGet("{id}/grupo-aprobacion")]
+        public async Task<ActionResult<RelacionGrupoAprobacionDto>> GetFirstGrupoAprobacionBySolicitud(int id)
+        {
+            var relacion = await _context.RelacionesGrupoAprobacion
+                .Where(r => r.SolicitudId == id)
+                .Include(r => r.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .FirstOrDefaultAsync();
+
+            if (relacion == null) return NotFound();
+            return Ok(relacion.ToDto());
+        }
+
+        // POST: api/solicitudes/5/inputs
+        [HttpPost("{id}/inputs")]
+    public async Task<ActionResult<RelacionInputDto>> AddInputToSolicitud(int id, [FromBody] RelacionInputCreateDto inputDto)
+        {
+            var solicitud = await _context.Solicitudes.FindAsync(id);
+            if (solicitud == null)
+            {
+                return NotFound();
+            }
+
+            var input = new RelacionInput
+            {
+                InputId = inputDto.InputId,
+                Nombre = inputDto.Nombre,
+                PlaceHolder = inputDto.PlaceHolder ?? string.Empty,
+                Valor = inputDto.Valor?.RawValue ?? string.Empty, // Puede ser vacío
+                Requerido = inputDto.Requerido,
+                SolicitudId = id
+            };
+
+            _context.RelacionesInput.Add(input);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, input.ToDto());
+        }
+
+        // POST: api/solicitudes/5/grupos-aprobacion
+        [HttpPost("{id}/grupos-aprobacion")]
+    public async Task<ActionResult<RelacionGrupoAprobacionDto>> AddGrupoAprobacionToSolicitud(int id, [FromBody] RelacionGrupoAprobacionCreateDto grupoDto)
+        {
+            var solicitud = await _context.Solicitudes.FindAsync(id);
+            if (solicitud == null)
+            {
+                return NotFound();
+            }
+
+            var grupoRelacion = new RelacionGrupoAprobacion
+            {
+                GrupoAprobacionId = grupoDto.GrupoAprobacionId,
+                SolicitudId = id
+            };
+
+            _context.RelacionesGrupoAprobacion.Add(grupoRelacion);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, grupoRelacion.ToDto());
+        }
+
+        // POST: api/solicitudes/5/decision
+        [HttpPost("{id}/decision")]
+        public async Task<IActionResult> AddDecisionToSolicitud(int id, [FromBody] RelacionDecisionUsuarioCreateDto decisionDto)
+        {
+            var solicitud = await _context.Solicitudes
+                .Include(s => s.GruposAprobacion)
+                .ThenInclude(rga => rga.Decisiones)
+                .ThenInclude(d => d.Usuario)
+                .FirstOrDefaultAsync(s => s.IdSolicitud == id);
+
+            if (solicitud == null)
+            {
+                return NotFound();
+            }
+
+            var grupoAprobacion = solicitud.GruposAprobacion.FirstOrDefault();
+            if (grupoAprobacion == null)
+            {
+                return BadRequest("No hay un grupo de aprobación asociado.");
+            }
+
+            var decision = new RelacionDecisionUsuario
+            {
+                IdUsuario = decisionDto.IdUsuario,
+                RelacionGrupoAprobacionId = grupoAprobacion.IdRelacion,
+                Decision = decisionDto.Decision
+            };
+
+            _context.DecisionesUsuario.Add(decision);
+            await _context.SaveChangesAsync();
+
+            // Obtener todos los usuarios del grupo de aprobación
+            var usuariosGrupo = await _context.RelacionesUsuarioGrupo
+                .Where(rug => rug.GrupoAprobacionId == grupoAprobacion.GrupoAprobacionId)
+                .Select(rug => rug.UsuarioId)
+                .ToListAsync();
+            var decisiones = grupoAprobacion.Decisiones.Select(d => d.IdUsuario).ToList();
+            bool todosVotaron = usuariosGrupo.All(uid => decisiones.Contains(uid));
+
+            // Actualizar estado basado en todas las decisiones
+            bool todasAprobadas = true;
+            bool algunaRechazada = false;
+
+            foreach (var ga in solicitud.GruposAprobacion)
+            {
+                var decisionesGrupo = ga.Decisiones;
+                if (decisionesGrupo.Any())
+                {
+                    if (!decisionesGrupo.All(d => d.Decision == true))
+                    {
+                        todasAprobadas = false;
+                    }
+                    if (decisionesGrupo.Any(d => d.Decision == false))
+                    {
+                        algunaRechazada = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    todasAprobadas = false;
+                }
+            }
+
+            if (todosVotaron)
+            {
+                if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
+                {
+                    solicitud.Estado = EstadoSolicitud.Aprobado;
+                    if (solicitud.FlujoBaseId == null)
+                    {
+                        var flujoActivo = new FlujoActivo
+                        {
+                            SolicitudId = solicitud.IdSolicitud,
+                            Nombre = solicitud.Nombre,
+                            Descripcion = solicitud.Descripcion,
+                            VersionActual = 1,
+                            FlujoEjecucionId = null,
+                            FechaInicio = DateTime.Now,
+                            Estado = EstadoFlujoActivo.EnCurso
+                        };
+                        Console.WriteLine($"Creando Flujo Activo para Solicitud {solicitud.IdSolicitud}");
+                        _context.FlujosActivos.Add(flujoActivo);
+                        await _context.SaveChangesAsync();
+
+                        // Crear el paso inicial con la información de la solicitud
+                        Console.WriteLine($"Creando paso inicial para Flujo Activo {flujoActivo.IdFlujoActivo}");
+                        await _workflowInitializationService.CrearPasoInicialAsync(flujoActivo);
+                        Console.WriteLine($"Paso inicial creado exitosamente");
+                    }
+                }
+                else if (algunaRechazada)
+                {
+                    solicitud.Estado = EstadoSolicitud.Rechazado;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { DecisionId = decision.IdRelacion, EstadoActual = solicitud.Estado, TodosVotaron = todosVotaron });
+        }
+
+        // PUT: api/solicitudes/{id}/inputs/{inputId}
+        [HttpPut("{id}/inputs/{inputId}")]
+        public async Task<IActionResult> UpdateInputInSolicitud(int id, int inputId, [FromBody] RelacionInputUpdateDto inputDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var solicitud = await _context.Solicitudes.FindAsync(id);
+            if (solicitud == null)
+            {
+                return NotFound("Solicitud no encontrada.");
+            }
+
+            var input = await _context.RelacionesInput
+                .FirstOrDefaultAsync(ri => ri.SolicitudId == id && ri.IdRelacion == inputId);
+            if (input == null)
+            {
+                return NotFound("Input no encontrado.");
+            }
+
+            // Actualizar solo los campos proporcionados, manteniendo los existentes si no se envían
+            if (inputDto.Valor != null) input.Valor = inputDto.Valor.RawValue ?? string.Empty; // Distingue entre null (no enviado) y "" (vacío)
+            if (inputDto.PlaceHolder != null) input.PlaceHolder = inputDto.PlaceHolder ?? string.Empty;
+            if (inputDto.Nombre != null) input.Nombre = inputDto.Nombre; // Nuevo: permite modificar Nombre
+            if (inputDto.Requerido.HasValue) input.Requerido = inputDto.Requerido.Value;
+
+            _context.Entry(input).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SolicitudExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        private bool SolicitudExists(int id)
+        {
+            return _context.Solicitudes.Any(e => e.IdSolicitud == id);
+        }
+    }
+    
+    
+}
