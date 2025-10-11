@@ -49,13 +49,13 @@ Este workflow se ejecuta **cada vez** que haces push o abres un PR en las ramas 
 ---
 
 ```yaml
-- name: Run tests
-  run: dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --no-build --verbosity normal --configuration Release
+    - name: Run tests
+      run: dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --no-build --verbosity normal --configuration Release --filter "FullyQualifiedName!~IntegrationTests"
 ```
-**¿Qué hace?** Ejecuta todos tus tests unitarios (en la carpeta `FluentisCore.Tests`).
-**¿Por qué?** Para asegurar que tu código funciona correctamente antes de desplegarlo.
-
----
+**¿Qué hace?** Ejecuta solo los tests unitarios (excluye tests de integración).
+**¿Por qué el filtro?** Los tests de integración requieren Azure AD y base de datos real, que no están disponibles en CI.
+**¿Qué es `FullyQualifiedName!~IntegrationTests`?** Excluye todas las clases que contengan "IntegrationTests" en su nombre.
+**¿Por qué?** Para asegurar que tu código funciona correctamente antes de desplegarlo, sin depender de recursos externos.---
 
 ```yaml
 - name: Install EF Core Tools

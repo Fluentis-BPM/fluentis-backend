@@ -360,6 +360,72 @@ Antes de considerar que todo está listo:
 
 ---
 
+## 🧪 Testing en CI/CD
+
+### ¿Por qué los tests de integración fallan en CI?
+
+Los **tests de integración** (`IntegrationTests.cs`) requieren:
+- ✅ Autenticación con Azure AD
+- ✅ Conexión a base de datos real
+- ✅ Credenciales reales de usuario
+
+En el pipeline de CI (GitHub Actions), estos recursos **NO están disponibles** por diseño, ya que:
+1. No queremos exponer credenciales reales en CI
+2. Los tests de integración son lentos
+3. CI debe ser rápido y no depender de servicios externos
+
+### ¿Qué tests se ejecutan en CI?
+
+Solo los **tests unitarios**:
+- ✅ `UsuarioValidationTests` - Validaciones de modelo
+- ✅ `UsuarioTests` - Operaciones CRUD simples
+- ✅ `DepartamentoTests` - Operaciones CRUD simples
+
+**Los tests de integración se ejecutan manualmente** en tu máquina local antes de hacer deploy.
+
+### ¿Cómo ejecutar tests de integración localmente?
+
+```bash
+# Configurar credenciales de Azure AD (solo una vez)
+dotnet user-secrets set "AzureAd:ClientId" "tu-client-id" --project FluentisCore.Tests
+dotnet user-secrets set "AzureAd:ClientSecret" "tu-client-secret" --project FluentisCore.Tests
+dotnet user-secrets set "AzureAd:TenantId" "tu-tenant-id" --project FluentisCore.Tests
+
+# Ejecutar TODOS los tests (incluidos integración)
+dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj
+
+# Ejecutar SOLO tests unitarios (como en CI)
+dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --filter "FullyQualifiedName!~IntegrationTests"
+
+# Ejecutar SOLO tests de integración
+dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --filter "FullyQualifiedName~IntegrationTests"
+```
+
+### Alternativa: Configurar credenciales en GitHub Secrets (Avanzado)
+
+Si quieres ejecutar tests de integración en CI:
+
+1. Crea secrets adicionales en GitHub:
+   ```
+   AZURE_AD_CLIENT_ID_TEST
+   AZURE_AD_CLIENT_SECRET_TEST
+   AZURE_AD_TENANT_ID_TEST
+   ```
+
+2. Modifica `ci.yml`:
+   ```yaml
+   - name: Run tests
+     run: dotnet test --no-build --verbosity normal
+     env:
+       AzureAd__ClientId: ${{ secrets.AZURE_AD_CLIENT_ID_TEST }}
+       AzureAd__ClientSecret: ${{ secrets.AZURE_AD_CLIENT_SECRET_TEST }}
+       AzureAd__TenantId: ${{ secrets.AZURE_AD_TENANT_ID_TEST }}
+   ```
+
+⚠️ **No recomendado** para estudiantes: consume más tiempo de CI y es más complejo.
+
+---
+
 ## 🐛 Troubleshooting
 
 ### Error: "Cannot connect to SQL Server"

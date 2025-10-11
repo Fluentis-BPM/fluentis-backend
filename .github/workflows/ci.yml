@@ -26,7 +26,7 @@ jobs:
       run: dotnet build FluentisCore.sln --no-restore --configuration Release
     
     - name: Run tests
-      run: dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --no-build --verbosity normal --configuration Release
+      run: dotnet test FluentisCore.Tests/FluentisCore.Tests.csproj --no-build --verbosity normal --configuration Release --filter "FullyQualifiedName!~IntegrationTests"
     
     - name: Install EF Core Tools
       run: dotnet tool install --global dotnet-ef
