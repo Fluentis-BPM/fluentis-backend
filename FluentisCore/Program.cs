@@ -23,10 +23,24 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            Console.WriteLine("CORS configurado para producción: Permitiendo solo el origen específico de la aplicación frontend.");
-            policy.WithOrigins("http://localhost:5173")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            Console.WriteLine("CORS configurado para producción: Leyendo orígenes desde configuración.");
+            
+            var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]
+                ?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                ?? Array.Empty<string>();
+            
+            if (allowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(allowedOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            }
+            else
+            {
+                Console.WriteLine("⚠️ ADVERTENCIA: No se configuraron orígenes permitidos para CORS.");
+                policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            }
         }
     });
 });

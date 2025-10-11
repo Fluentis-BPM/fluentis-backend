@@ -1,0 +1,112 @@
+name: CD Backend
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Permite ejecución manual desde GitHub
+
+jobs:
+  deploy-pruebas:
+    runs-on: ubuntu-latest
+    # environment: pruebas  # Comentado - Opcional: crea este environment en GitHub si quieres aprobación manual
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET 9.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore FluentisCore/FluentisCore.csproj
+    
+    - name: Build
+      run: dotnet build FluentisCore/FluentisCore.csproj --configuration Release --no-restore
+    
+    - name: Publish
+      run: dotnet publish FluentisCore/FluentisCore.csproj --configuration Release --output ./publish --no-build
+    
+    - name: Install EF Core Tools
+      run: dotnet tool install --global dotnet-ef
+    
+    - name: Generate Migration Script
+      run: |
+        dotnet ef migrations script \
+          --project FluentisCore/FluentisCore.csproj \
+          --startup-project FluentisCore/FluentisCore.csproj \
+          --idempotent \
+          --output ./publish/migrations.sql
+    
+    - name: Deploy to Azure Web App (Pruebas)
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ secrets.AZURE_WEBAPP_NAME_PRUEBAS }}
+        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_PRUEBAS }}
+        package: ./publish
+    
+    - name: Run Migrations on Azure SQL (Pruebas)
+      uses: azure/sql-action@v2.2
+      with:
+        connection-string: ${{ secrets.AZURE_SQL_CONNECTION_STRING_PRUEBAS }}
+        path: './publish/migrations.sql'
+    
+    - name: Deployment Summary
+      run: |
+        echo "✅ Backend desplegado en ambiente de PRUEBAS"
+        echo "🔗 URL: https://${{ secrets.AZURE_WEBAPP_NAME_PRUEBAS }}.azurewebsites.net"
+        echo "📊 Migraciones aplicadas exitosamente"
+
+  deploy-produccion:
+    runs-on: ubuntu-latest
+    # environment: produccion  # Comentado - Opcional: crea este environment en GitHub si quieres aprobación manual
+    needs: deploy-pruebas # Solo se ejecuta si pruebas fue exitoso
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET 9.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore FluentisCore/FluentisCore.csproj
+    
+    - name: Build
+      run: dotnet build FluentisCore/FluentisCore.csproj --configuration Release --no-restore
+    
+    - name: Publish
+      run: dotnet publish FluentisCore/FluentisCore.csproj --configuration Release --output ./publish --no-build
+    
+    - name: Install EF Core Tools
+      run: dotnet tool install --global dotnet-ef
+    
+    - name: Generate Migration Script
+      run: |
+        dotnet ef migrations script \
+          --project FluentisCore/FluentisCore.csproj \
+          --startup-project FluentisCore/FluentisCore.csproj \
+          --idempotent \
+          --output ./publish/migrations.sql
+    
+    - name: Deploy to Azure Web App (Producción)
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ secrets.AZURE_WEBAPP_NAME_PROD }}
+        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_PROD }}
+        package: ./publish
+    
+    - name: Run Migrations on Azure SQL (Producción)
+      uses: azure/sql-action@v2.2
+      with:
+        connection-string: ${{ secrets.AZURE_SQL_CONNECTION_STRING_PROD }}
+        path: './publish/migrations.sql'
+    
+    - name: Deployment Summary
+      run: |
+        echo "✅ Backend desplegado en PRODUCCIÓN"
+        echo "🔗 URL: https://${{ secrets.AZURE_WEBAPP_NAME_PROD }}.azurewebsites.net"
+        echo "📊 Migraciones aplicadas exitosamente"
