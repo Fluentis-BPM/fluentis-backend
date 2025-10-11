@@ -227,9 +227,9 @@ environment: pruebas  # ❌ Error si no existe este environment en GitHub
     ↓
 ✅ Tests pasan → Todo bien ✅
     ↓
-🔀 git checkout main && git merge develop
+🔀 git checkout master && git merge develop
     ↓
-🚀 git push origin main
+🚀 git push origin master
     ↓
 🚀 CD se ejecuta automáticamente:
     ↓

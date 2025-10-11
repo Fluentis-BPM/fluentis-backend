@@ -88,11 +88,11 @@ az webapp config appsettings set \
 1. **Crear recursos en Azure** (ver `DEPLOYMENT.md` completo)
 2. **Configurar secrets en GitHub**
 3. **Hacer el cambio de CORS en `Program.cs`**
-4. **Push a `main`:**
+4. **Push a `master`:**
    ```bash
    git add .
    git commit -m "feat: setup CI/CD"
-   git push origin main
+   git push origin master
    ```
 5. **Ver el deploy en GitHub Actions**
 

@@ -289,12 +289,12 @@ git push origin develop
 3. Click en él para ver los logs
 4. ✅ Verifica que todos los pasos pasen
 
-### 6.3. Merge a main para Deploy
+### 6.3. Merge a master para Deploy
 
 ```powershell
-git checkout main
+git checkout master
 git merge develop
-git push origin main
+git push origin master
 ```
 
 ### 6.4. Ver CD ejecutándose

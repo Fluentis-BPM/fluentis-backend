@@ -18,7 +18,7 @@ Backend para sistema de gestión de flujos de trabajo (BPM) desarrollado con ASP
 1. **Lee primero:** [EXPLICACION_CICD.md](EXPLICACION_CICD.md) para entender cómo funciona
 2. **Sigue:** [DEPLOYMENT_AZURE_PORTAL.md](DEPLOYMENT_AZURE_PORTAL.md) para configurar Azure
 3. **Haz el cambio en `Program.cs`** (explicado en las guías)
-4. **Push a `main`** y el deploy se ejecutará automáticamente
+4. **Push a `master`** y el deploy se ejecutará automáticamente
 
 ### ✅ Ambientes
 

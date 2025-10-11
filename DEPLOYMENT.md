@@ -318,12 +318,12 @@ git push origin develop
 
 Ve a **GitHub → Actions** y verifica que el workflow `CI Backend` se ejecute correctamente.
 
-### 2. Merge a `main` (para ejecutar CD)
+### 2. Merge a `master` (para ejecutar CD)
 
 ```bash
-git checkout main
+git checkout master
 git merge develop
-git push origin main
+git push origin master
 ```
 
 El workflow `CD Backend` se ejecutará automáticamente:
