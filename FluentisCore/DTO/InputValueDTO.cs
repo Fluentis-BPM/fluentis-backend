@@ -178,6 +178,12 @@ namespace FluentisCore.DTO
         /// Type-safe input value
         /// </summary>
         public InputValueDto? Valor { get; set; }
+
+        /// <summary>
+        /// Opciones para tipos basados en lista (Combobox, MultipleCheckbox, RadioGroup)
+        /// Se persisten en RelacionInput.OptionsJson
+        /// </summary>
+        public List<string>? Opciones { get; set; }
     }
 
     /// <summary>
@@ -200,5 +206,11 @@ namespace FluentisCore.DTO
         /// Type-safe input value for updates
         /// </summary>
         public InputValueDto? Valor { get; set; }
+
+        /// <summary>
+        /// Opciones para tipos basados en lista (Combobox, MultipleCheckbox, RadioGroup)
+        /// Se persisten en RelacionInput.OptionsJson
+        /// </summary>
+        public List<string>? Opciones { get; set; }
     }
 }

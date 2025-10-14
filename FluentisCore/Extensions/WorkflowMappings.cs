@@ -212,6 +212,7 @@ namespace FluentisCore.Extensions
                 TipoInput.TextoLargo => "texto_largo",
                 TipoInput.Combobox => "combobox",
                 TipoInput.MultipleCheckbox => "multiple_checkbox",
+                TipoInput.RadioGroup => "radiogroup",
                 TipoInput.Date => "date",
                 TipoInput.Number => "number",
                 TipoInput.Archivo => "archivo",
