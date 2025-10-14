@@ -53,9 +53,10 @@ namespace FluentisCore.Extensions
             {
                 InputId = dto.InputId,
                 Nombre = dto.Nombre,
-                PlaceHolder = dto.PlaceHolder,
+                PlaceHolder = dto.PlaceHolder ?? string.Empty,
                 Requerido = dto.Requerido,
-                Valor = dto.Valor?.RawValue
+                Valor = dto.Valor?.RawValue ?? string.Empty,
+                OptionsJson = (dto.Opciones != null && dto.Opciones.Any()) ? System.Text.Json.JsonSerializer.Serialize(dto.Opciones) : null
             };
         }
 
@@ -71,13 +72,19 @@ namespace FluentisCore.Extensions
                 model.Nombre = dto.Nombre;
             
             if (dto.PlaceHolder != null)
-                model.PlaceHolder = dto.PlaceHolder;
+                model.PlaceHolder = dto.PlaceHolder ?? string.Empty;
             
             if (dto.Requerido.HasValue)
                 model.Requerido = dto.Requerido.Value;
             
             if (dto.Valor != null)
-                model.Valor = dto.Valor.RawValue;
+                model.Valor = dto.Valor.RawValue ?? string.Empty;
+
+            // Actualizar opciones si vienen en el DTO
+            if (dto.Opciones != null)
+            {
+                model.OptionsJson = dto.Opciones.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.Opciones) : null;
+            }
         }
 
         /// <summary>

@@ -232,15 +232,8 @@ namespace FluentisCore.Controllers
                 return NotFound("Input no encontrado.");
             }
 
-            var relacion = new RelacionInput
-            {
-                InputId = dto.InputId,
-                Nombre = dto.Nombre,
-                Valor = dto.Valor?.RawValue ?? string.Empty,
-                PlaceHolder = dto.PlaceHolder ?? string.Empty,
-                Requerido = dto.Requerido,
-                PasoSolicitudId = id
-            };
+            var relacion = dto.ToModel();
+            relacion.PasoSolicitudId = id;
             _context.RelacionesInput.Add(relacion);
             await _context.SaveChangesAsync();
 
@@ -265,17 +258,8 @@ namespace FluentisCore.Controllers
                 return NotFound("Relación de input no encontrada.");
             }
 
-            if (dto.Valor != null)
-            {
-                var newRaw = dto.Valor.RawValue;
-                if (newRaw != null)
-                {
-                    relacion.Valor = newRaw;
-                }
-            }
-            relacion.PlaceHolder = dto.PlaceHolder ?? relacion.PlaceHolder;
-            if (dto.Requerido.HasValue) relacion.Requerido = dto.Requerido.Value;
-            relacion.Nombre = dto.Nombre ?? relacion.Nombre;
+            // Reutilizar extensión para mantener consistencia, incluida OptionsJson
+            relacion.UpdateFromDto(dto);
 
             _context.Entry(relacion).State = EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -827,6 +811,7 @@ namespace FluentisCore.Controllers
                 TipoInput.TextoLargo => "texto_largo", 
                 TipoInput.Combobox => "combobox",
                 TipoInput.MultipleCheckbox => "multiple_checkbox",
+                TipoInput.RadioGroup => "radiogroup",
                 TipoInput.Date => "date",
                 TipoInput.Number => "number", 
                 TipoInput.Archivo => "archivo",
