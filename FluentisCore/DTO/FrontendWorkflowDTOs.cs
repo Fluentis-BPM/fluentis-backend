@@ -37,6 +37,8 @@ namespace FluentisCore.DTO
         [JsonPropertyName("tipo_input")] public string TipoInput { get; set; } = string.Empty;
         [JsonPropertyName("paso_solicitud_id")] public int? PasoSolicitudId { get; set; }
         [JsonPropertyName("solicitud_id")] public int? SolicitudId { get; set; }
+        [JsonPropertyName("json_options")] public string? JsonOptions { get; set; }
+
     }
 
     public class RelacionGrupoAprobacionFrontendDto

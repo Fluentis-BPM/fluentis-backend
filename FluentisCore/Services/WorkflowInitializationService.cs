@@ -147,14 +147,15 @@ namespace FluentisCore.Services
         }
 
         /// <summary>
-        /// Crea un paso final para el flujo (opcional, para ser usado cuando se completa el flujo)
+        /// Crea un paso final para el flujo automáticamente junto con el paso inicial
+        /// Este paso no tiene responsable y solo sirve para determinar cuándo el flujo ha finalizado
         /// </summary>
-        public async Task<PasoSolicitud> CrearPasoFinalAsync(int flujoActivoId, int responsableId)
+        public async Task<PasoSolicitud> CrearPasoFinalAsync(FlujoActivo flujoActivo)
         {
             var pasoFinal = new PasoSolicitud
             {
-                FlujoActivoId = flujoActivoId,
-                ResponsableId = responsableId,
+                FlujoActivoId = flujoActivo.IdFlujoActivo,
+                ResponsableId = null, // Sin responsable, es un nodo de control
                 TipoPaso = TipoPaso.Fin,
                 Estado = EstadoPasoSolicitud.Pendiente,
                 Nombre = "Paso Final",
@@ -167,6 +168,82 @@ namespace FluentisCore.Services
             await _context.SaveChangesAsync();
 
             return pasoFinal;
+        }
+
+        /// <summary>
+        /// Verifica si todos los nodos padre (conectados) al paso Fin están en estado completado
+        /// y marca el paso Fin y el FlujoActivo como finalizados si es necesario
+        /// </summary>
+        public async Task VerificarYFinalizarFlujoAsync(int pasoId)
+        {
+            var paso = await _context.PasosSolicitud
+                .Include(p => p.FlujoActivo)
+                .FirstOrDefaultAsync(p => p.IdPasoSolicitud == pasoId);
+
+            if (paso == null)
+            {
+                throw new InvalidOperationException($"Paso con ID {pasoId} no encontrado");
+            }
+
+            // Buscar el paso Fin del mismo flujo
+            var pasoFin = await _context.PasosSolicitud
+                .Include(p => p.FlujoActivo)
+                .FirstOrDefaultAsync(p => p.FlujoActivoId == paso.FlujoActivoId && p.TipoPaso == TipoPaso.Fin);
+
+            if (pasoFin == null)
+            {
+                // Si no hay paso fin, no hacemos nada
+                return;
+            }
+
+            // Verificar si el paso Fin ya está finalizado
+            if (pasoFin.Estado == EstadoPasoSolicitud.Entregado || pasoFin.Estado == EstadoPasoSolicitud.Aprobado)
+            {
+                return; // Ya está finalizado
+            }
+
+            // Obtener todos los pasos que conectan AL paso Fin (sus padres)
+            var conexionesAlFin = await _context.ConexionesPasoSolicitud
+                .Where(c => c.PasoDestinoId == pasoFin.IdPasoSolicitud)
+                .Select(c => c.PasoOrigenId)
+                .ToListAsync();
+
+            if (!conexionesAlFin.Any())
+            {
+                // Si no hay conexiones al paso Fin, no se puede finalizar automáticamente
+                return;
+            }
+
+            // Obtener todos los pasos padre
+            var pasosPadre = await _context.PasosSolicitud
+                .Where(p => conexionesAlFin.Contains(p.IdPasoSolicitud))
+                .ToListAsync();
+
+            // Verificar si TODOS los pasos padre están en estado completado
+            var todosCompletados = pasosPadre.All(p => 
+                p.Estado == EstadoPasoSolicitud.Aprobado || 
+                p.Estado == EstadoPasoSolicitud.Entregado
+            );
+
+            if (todosCompletados)
+            {
+                // Marcar el paso Fin como completado
+                pasoFin.Estado = EstadoPasoSolicitud.Entregado;
+                pasoFin.FechaFin = DateTime.UtcNow;
+                _context.Entry(pasoFin).State = EntityState.Modified;
+
+                // Marcar el FlujoActivo como Finalizado
+                var flujoActivo = await _context.FlujosActivos.FindAsync(paso.FlujoActivoId);
+                if (flujoActivo != null)
+                {
+                    flujoActivo.Estado = EstadoFlujoActivo.Finalizado;
+                    flujoActivo.FechaFinalizacion = DateTime.UtcNow;
+                    _context.Entry(flujoActivo).State = EntityState.Modified;
+                }
+
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"✅ Flujo {paso.FlujoActivoId} finalizado automáticamente");
+            }
         }
     }
 }

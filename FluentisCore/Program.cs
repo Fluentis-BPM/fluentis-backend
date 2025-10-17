@@ -129,7 +129,12 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<FluentisContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    opt.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null)));
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -185,6 +190,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<FluentisContext>();
     var skipMigrations = Environment.GetEnvironmentVariable("SKIP_DB_MIGRATIONS") == "1";
+    var connected = false; // estado de conexión/migración disponible para inicialización posterior
     if (skipMigrations)
     {
         Console.WriteLine("⚠️ SKIP_DB_MIGRATIONS=1 detectado: se omiten migraciones y verificación de conexión.");
@@ -194,7 +200,6 @@ using (var scope = app.Services.CreateScope())
         var maxRetries = 10;
         var delayMs = 3000;
         var attempt = 0;
-        var connected = false;
         var cs = db.Database.GetConnectionString() ?? string.Empty;
         try
         {
@@ -208,23 +213,16 @@ using (var scope = app.Services.CreateScope())
             attempt++;
             try
             {
-                Console.WriteLine($"[DB] Conexión intento {attempt}/{maxRetries}...");
-                if (db.Database.CanConnect())
-                {
-                    Console.WriteLine("✅ Base de datos alcanzable. Ejecutando migraciones...");
-                    db.Database.Migrate();
-                    connected = true;
-                    Console.WriteLine("✅ Migraciones aplicadas.");
-                    break;
-                }
-                else
-                {
-                    throw new Exception("CanConnect() devolvió false");
-                }
+                Console.WriteLine($"[DB] Intento {attempt}/{maxRetries}: aplicando migraciones...");
+                // Migrate crea la base de datos si no existe y aplica el esquema
+                db.Database.Migrate();
+                connected = true;
+                Console.WriteLine("✅ Migraciones aplicadas (o ya estaban al día).");
+                break;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Falló la conexión (intento {attempt}): {ex.Message}");
+                Console.WriteLine($"❌ Falló Migrate() (intento {attempt}): {ex.Message}");
                 if (attempt < maxRetries)
                 {
                     Console.WriteLine($"⏳ Reintentando en {delayMs/1000.0:F1}s...");
@@ -239,37 +237,45 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
+    // Solo ejecutar inicialización de datos si la conexión/migración fue exitosa
+    if (connected)
+    {
+        var initDB = new FluentisCore.Modules.DBInit.DBInit(db);
 
-    // Siempre asegurar catálogo de Inputs, independientemente de datos de ejemplo.
-    try
-    {
-        initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"⚠️ No se pudieron insertar inputs iniciales: {ex.Message}");
-    }
+        // Siempre asegurar catálogo de Inputs, independientemente de datos de ejemplo.
+        try
+        {
+            initDB.InsertMockInputs(); // Garantiza que todos los TipoInput existan
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ No se pudieron insertar inputs iniciales: {ex.Message}");
+        }
 
-    var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
-    if (File.Exists(jsonPath))
-    {
-        var jsonData = File.ReadAllText(jsonPath);
-        initDB.InsertCargosFromJson(jsonData);
-        initDB.InsertRols();
-        initDB.InsertDepartamentos();
-        initDB.InsertMockUsers(); // Insert mock users with relationships
-        initDB.InsertMockApprovalGroups(); // Insert approval groups
-        initDB.InsertMockUserGroupRelations(); // Link users to approval groups
-        initDB.InsertMockWorkflows(); // Insert sample workflows
-        Console.WriteLine("✅ Base de datos inicializada con datos de prueba completos");
-        Console.WriteLine("👥 Usuarios creados con relaciones a departamentos, roles y cargos");
-        Console.WriteLine("🔄 Flujos de aprobación y grupos configurados");
-        Console.WriteLine("📋 Tipos de inputs configurados");
+        var jsonPath = Path.Combine(AppContext.BaseDirectory, "Resources", "Cargos.json");
+        if (File.Exists(jsonPath))
+        {
+            var jsonData = File.ReadAllText(jsonPath);
+            initDB.InsertCargosFromJson(jsonData);
+            initDB.InsertRols();
+            initDB.InsertDepartamentos();
+            initDB.InsertMockUsers(); // Insert mock users with relationships
+            initDB.InsertMockApprovalGroups(); // Insert approval groups
+            initDB.InsertMockUserGroupRelations(); // Link users to approval groups
+            initDB.InsertMockWorkflows(); // Insert sample workflows
+            Console.WriteLine("✅ Base de datos inicializada con datos de prueba completos");
+            Console.WriteLine("👥 Usuarios creados con relaciones a departamentos, roles y cargos");
+            Console.WriteLine("🔄 Flujos de aprobación y grupos configurados");
+            Console.WriteLine("📋 Tipos de inputs configurados");
+        }
+        else
+        {
+            Console.WriteLine("⚠️ No se encontró el archivo Resources/Cargos.json");
+        }
     }
     else
     {
-        Console.WriteLine("⚠️ No se encontró el archivo Resources/Cargos.json");
+        Console.WriteLine("⚠️ Saltando inicialización de datos porque no hay conexión a la base de datos.");
     }
 }
 
