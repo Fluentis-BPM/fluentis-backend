@@ -752,8 +752,6 @@ namespace FluentisCore.Controllers
             var aprobaciones = decisiones.Count(d => d.Decision == true);
             var rechazos = decisiones.Count(d => d.Decision == false);
 
-            var estadoAnterior = paso.Estado;
-
             switch (paso.ReglaAprobacion)
             {
                 case ReglaAprobacion.Unanimidad:
