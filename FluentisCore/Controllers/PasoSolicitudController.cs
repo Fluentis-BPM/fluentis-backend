@@ -210,19 +210,27 @@ namespace FluentisCore.Controllers
                 return NotFound();
             }
 
-            // Validar estado según tipo_paso
-            var validStates = new[] { EstadoPasoSolicitud.Pendiente, EstadoPasoSolicitud.Aprobado,
-                                    EstadoPasoSolicitud.Rechazado, EstadoPasoSolicitud.Excepcion };
-            if (paso.TipoPaso == TipoPaso.Ejecucion)
+            // Validar y actualizar estado solo si viene en el DTO (evita resetear a Pendiente en PUT parciales)
+            if (dto.Estado.HasValue)
             {
-                validStates = validStates.Concat(new[] { EstadoPasoSolicitud.Entregado }).ToArray();
+                var validStates = new[]
+                {
+                    EstadoPasoSolicitud.Pendiente,
+                    EstadoPasoSolicitud.Aprobado,
+                    EstadoPasoSolicitud.Rechazado,
+                    EstadoPasoSolicitud.Excepcion
+                };
+                if (paso.TipoPaso == TipoPaso.Ejecucion)
+                {
+                    validStates = validStates.Concat(new[] { EstadoPasoSolicitud.Entregado }).ToArray();
+                }
+                if (!validStates.Contains(dto.Estado.Value))
+                {
+                    return BadRequest("Estado no válido para este tipo de paso.");
+                }
+
+                paso.Estado = dto.Estado.Value;
             }
-            if (!validStates.Contains(dto.Estado))
-            {
-                return BadRequest("Estado no válido para este tipo de paso.");
-            }
-            var estadoAnterior = paso.Estado;
-            paso.Estado = dto.Estado;
 
             paso.FechaFin = dto.FechaFin ?? paso.FechaFin;
             if (paso.TipoPaso == TipoPaso.Ejecucion && dto.ResponsableId.HasValue)
@@ -245,7 +253,8 @@ namespace FluentisCore.Controllers
                 await _context.SaveChangesAsync();
 
                 // Verificar si el paso se completó (Aprobado o Entregado) y si debe finalizar el flujo
-                if (paso.Estado == EstadoPasoSolicitud.Aprobado || paso.Estado == EstadoPasoSolicitud.Entregado)
+                if (dto.Estado.HasValue &&
+                    (dto.Estado.Value == EstadoPasoSolicitud.Aprobado || dto.Estado.Value == EstadoPasoSolicitud.Entregado))
                 {
                     await _workflowService.VerificarYFinalizarFlujoAsync(id);
                 }
