@@ -427,6 +427,11 @@ namespace FluentisCore.Controllers
                         Console.WriteLine($"Creando paso inicial para Flujo Activo {flujoActivo.IdFlujoActivo}");
                         await _workflowInitializationService.CrearPasoInicialAsync(flujoActivo);
                         Console.WriteLine($"Paso inicial creado exitosamente");
+
+                        // Crear el paso final automáticamente
+                        Console.WriteLine($"Creando paso final para Flujo Activo {flujoActivo.IdFlujoActivo}");
+                        await _workflowInitializationService.CrearPasoFinalAsync(flujoActivo);
+                        Console.WriteLine($"Paso final creado exitosamente");
                     }
                 }
                 else if (algunaRechazada)
