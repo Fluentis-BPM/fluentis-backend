@@ -12,6 +12,7 @@ using FluentisCore.Models.CommentAndNotificationManagement;
 using FluentisCore.Models.MetricsAndReportsManagement;
 using FluentisCore.Extensions;
 using System.Security.Claims;
+using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
@@ -21,10 +22,12 @@ namespace FluentisCore.Controllers
     public class PasoSolicitudController : ControllerBase
     {
         private readonly FluentisContext _context;
+        private readonly WorkflowInitializationService _workflowService;
 
-        public PasoSolicitudController(FluentisContext context)
+        public PasoSolicitudController(FluentisContext context, WorkflowInitializationService workflowService)
         {
             _context = context;
+            _workflowService = workflowService;
         }
 
         // POST: api/pasosolicitudes
@@ -240,7 +243,12 @@ namespace FluentisCore.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                await TryAdvanceFromPasoAsync(paso, estadoAnterior);
+
+                // Verificar si el paso se completó (Aprobado o Entregado) y si debe finalizar el flujo
+                if (paso.Estado == EstadoPasoSolicitud.Aprobado || paso.Estado == EstadoPasoSolicitud.Entregado)
+                {
+                    await _workflowService.VerificarYFinalizarFlujoAsync(id);
+                }
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -744,6 +752,8 @@ namespace FluentisCore.Controllers
             var aprobaciones = decisiones.Count(d => d.Decision == true);
             var rechazos = decisiones.Count(d => d.Decision == false);
 
+            var estadoAnterior = paso.Estado;
+
             switch (paso.ReglaAprobacion)
             {
                 case ReglaAprobacion.Unanimidad:
@@ -769,8 +779,11 @@ namespace FluentisCore.Controllers
             _context.Entry(paso).State = EntityState.Modified;
             await _context.SaveChangesAsync();
 
-            // Intentar avanzar el flujo solo si hubo un cambio de estado relevante
-            await TryAdvanceFromPasoAsync(paso, estadoAnterior);
+            // Si el paso se aprobó, verificar si el flujo debe finalizarse
+            if (estadoAnterior != EstadoPasoSolicitud.Aprobado && paso.Estado == EstadoPasoSolicitud.Aprobado)
+            {
+                await _workflowService.VerificarYFinalizarFlujoAsync(pasoId);
+            }
         }
 
         private async Task<TipoFlujo> GetTipoFlujo(int pasoId)
