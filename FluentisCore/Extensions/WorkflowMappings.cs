@@ -115,7 +115,8 @@ namespace FluentisCore.Extensions
                 Valor = model.Valor,
                 TipoInput = MapTipoInput(model.Input?.TipoInput ?? TipoInput.TextoCorto),
                 PasoSolicitudId = model.PasoSolicitudId,
-                SolicitudId = model.SolicitudId
+                SolicitudId = model.SolicitudId,
+                JsonOptions = model.OptionsJson
             };
         }
 

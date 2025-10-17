@@ -115,33 +115,82 @@ namespace FluentisCore.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePasoSolicitud(int id)
         {
+            // Buscar el paso
             var paso = await _context.PasosSolicitud.FindAsync(id);
             if (paso == null)
             {
                 return NotFound("Paso de solicitud no encontrado.");
             }
 
-            // Cargar colecciones relacionadas
-            await _context.Entry(paso).Collection(p => p.RelacionesInput).LoadAsync();
-            await _context.Entry(paso).Reference(p => p.RelacionesGrupoAprobacion).LoadAsync();
-            await _context.Entry(paso).Collection(p => p.Comentarios).LoadAsync();
-            await _context.Entry(paso).Collection(p => p.Excepciones).LoadAsync();
+            // Ejecutar todo en una transacción resiliente (compatible con SqlServerRetryingExecutionStrategy)
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // 1) Eliminar conexiones entrantes y salientes (DeleteBehavior.NoAction requiere borrarlas manualmente)
+                    var conexionesSalientes = await _context.ConexionesPasoSolicitud
+                        .Where(c => c.PasoOrigenId == id)
+                        .ToListAsync();
+                    if (conexionesSalientes.Count > 0)
+                    {
+                        _context.ConexionesPasoSolicitud.RemoveRange(conexionesSalientes);
+                        await _context.SaveChangesAsync();
+                    }
 
-            // Eliminar dependencias para evitar conflictos de FK (ajusta DbSets si tu contexto usa otros nombres)
-            if (paso.RelacionesInput?.Any() == true)
-                _context.RelacionesInput.RemoveRange(paso.RelacionesInput);
+                    var conexionesEntrantes = await _context.ConexionesPasoSolicitud
+                        .Where(c => c.PasoDestinoId == id)
+                        .ToListAsync();
+                    if (conexionesEntrantes.Count > 0)
+                    {
+                        _context.ConexionesPasoSolicitud.RemoveRange(conexionesEntrantes);
+                        await _context.SaveChangesAsync();
+                    }
 
-            if (paso.RelacionesGrupoAprobacion != null)
-                _context.RelacionesGrupoAprobacion.Remove(paso.RelacionesGrupoAprobacion);
+                    // 2) Eliminar decisiones y relación de grupo de aprobación si existe (Restrict exige borrar decisiones primero)
+                    var relacionGrupo = await _context.RelacionesGrupoAprobacion
+                        .Include(r => r.Decisiones)
+                        .FirstOrDefaultAsync(r => r.PasoSolicitudId == id);
+                    if (relacionGrupo != null)
+                    {
+                        if (relacionGrupo.Decisiones?.Any() == true)
+                        {
+                            _context.DecisionesUsuario.RemoveRange(relacionGrupo.Decisiones);
+                            await _context.SaveChangesAsync();
+                        }
+                        _context.RelacionesGrupoAprobacion.Remove(relacionGrupo);
+                        await _context.SaveChangesAsync();
+                    }
 
-            if (paso.Comentarios?.Any() == true)
-                _context.Comentarios.RemoveRange(paso.Comentarios);
+                    // 3) Cargar y eliminar colecciones relacionadas que cuelgan del paso (inputs, comentarios, excepciones)
+                    await _context.Entry(paso).Collection(p => p.RelacionesInput).LoadAsync();
+                    await _context.Entry(paso).Collection(p => p.Comentarios).LoadAsync();
+                    await _context.Entry(paso).Collection(p => p.Excepciones).LoadAsync();
 
-            if (paso.Excepciones?.Any() == true)
-                _context.Excepciones.RemoveRange(paso.Excepciones);
+                    if (paso.RelacionesInput?.Any() == true)
+                        _context.RelacionesInput.RemoveRange(paso.RelacionesInput);
 
-            _context.PasosSolicitud.Remove(paso);
-            await _context.SaveChangesAsync();
+                    if (paso.Comentarios?.Any() == true)
+                        _context.Comentarios.RemoveRange(paso.Comentarios);
+
+                    if (paso.Excepciones?.Any() == true)
+                        _context.Excepciones.RemoveRange(paso.Excepciones);
+
+                    await _context.SaveChangesAsync();
+
+                    // 4) Eliminar el paso
+                    _context.PasosSolicitud.Remove(paso);
+                    await _context.SaveChangesAsync();
+
+                    await tx.CommitAsync();
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
 
             return NoContent();
         }
@@ -172,6 +221,7 @@ namespace FluentisCore.Controllers
             {
                 return BadRequest("Estado no válido para este tipo de paso.");
             }
+            var estadoAnterior = paso.Estado;
             paso.Estado = dto.Estado;
 
             paso.FechaFin = dto.FechaFin ?? paso.FechaFin;
@@ -695,6 +745,7 @@ namespace FluentisCore.Controllers
             if (paso == null || paso.TipoPaso != TipoPaso.Aprobacion || paso.RelacionesGrupoAprobacion == null)
                 return;
 
+            var estadoAnterior = paso.Estado;
             var grupo = paso.RelacionesGrupoAprobacion.GrupoAprobacion;
             var decisiones = paso.RelacionesGrupoAprobacion.Decisiones;
             var totalUsuarios = grupo.RelacionesUsuarioGrupo.Count;
@@ -756,6 +807,73 @@ namespace FluentisCore.Controllers
             return _context.PasosSolicitud.Any(e => e.IdPasoSolicitud == id);
         }
 
+        // --- Encadenamiento de flujo: helpers privados ---
+        private static bool EsExito(EstadoPasoSolicitud estado)
+            => estado == EstadoPasoSolicitud.Aprobado || estado == EstadoPasoSolicitud.Entregado;
+
+        private static bool EsFallo(EstadoPasoSolicitud estado)
+            => estado == EstadoPasoSolicitud.Rechazado || estado == EstadoPasoSolicitud.Excepcion;
+
+        private async Task TryAdvanceFromPasoAsync(PasoSolicitud paso, EstadoPasoSolicitud estadoAnterior)
+        {
+            // Avanzar solo cuando hay transición a un estado terminal de interés
+            if (paso == null) return;
+            if (paso.Estado == estadoAnterior) return;
+
+            var avanzarPorExcepcion = EsFallo(paso.Estado);
+            var avanzarPorExito = EsExito(paso.Estado);
+            if (!avanzarPorExito && !avanzarPorExcepcion) return;
+
+            // Buscar conexiones salientes según resultado (normal vs excepción)
+            var conexiones = await _context.ConexionesPasoSolicitud
+                .Where(c => c.PasoOrigenId == paso.IdPasoSolicitud && c.EsExcepcion == avanzarPorExcepcion)
+                .ToListAsync();
+
+            foreach (var conexion in conexiones)
+            {
+                var destino = await _context.PasosSolicitud.FirstOrDefaultAsync(p => p.IdPasoSolicitud == conexion.PasoDestinoId);
+                if (destino == null) continue;
+
+                // Para conexiones de éxito (normales): esperar a que todos los orígenes normales estén completos con éxito (manejo de unión)
+                if (!avanzarPorExcepcion)
+                {
+                    var origenesNormales = await _context.ConexionesPasoSolicitud
+                        .Where(c => c.PasoDestinoId == destino.IdPasoSolicitud && !c.EsExcepcion)
+                        .Select(c => c.PasoOrigenId)
+                        .ToListAsync();
+
+                    if (origenesNormales.Count > 1)
+                    {
+                        var pasosOrigen = await _context.PasosSolicitud
+                            .Where(p => origenesNormales.Contains(p.IdPasoSolicitud))
+                            .Select(p => new { p.IdPasoSolicitud, p.Estado })
+                            .ToListAsync();
+
+                        var todosListos = pasosOrigen.All(po => EsExito(po.Estado));
+                        if (!todosListos)
+                        {
+                            // Aún no activar el destino hasta que lleguen todos los orígenes
+                            continue;
+                        }
+                    }
+                }
+
+            }
+        }
+
+        private async Task CerrarFlujoSiCorresponde(PasoSolicitud pasoFin)
+        {
+            // Cerrar el FlujoActivo si existe y no está ya finalizado/cancelado
+            var flujo = await _context.FlujosActivos.FirstOrDefaultAsync(f => f.IdFlujoActivo == pasoFin.FlujoActivoId);
+            if (flujo == null) return;
+            if (flujo.Estado == EstadoFlujoActivo.Finalizado || flujo.Estado == EstadoFlujoActivo.Cancelado) return;
+
+            flujo.Estado = EstadoFlujoActivo.Finalizado;
+            flujo.FechaFinalizacion = DateTime.UtcNow;
+            _context.Entry(flujo).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<PasoSolicitudFrontendDto>> GetPasoSolicitud(int id)
         {
@@ -815,7 +933,8 @@ namespace FluentisCore.Controllers
                 Valor = item.Relacion.Valor,
                 TipoInput = MapTipoInputController(item.Input.TipoInput),
                 PasoSolicitudId = item.Relacion.PasoSolicitudId,
-                SolicitudId = item.Relacion.SolicitudId
+                SolicitudId = item.Relacion.SolicitudId,
+                JsonOptions = item.Relacion.OptionsJson
             }).ToList();
 
             return inputsWithTypes;
