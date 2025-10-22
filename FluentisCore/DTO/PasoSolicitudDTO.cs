@@ -12,7 +12,7 @@ namespace FluentisCore.DTO
         [Required]
         public TipoPaso TipoPaso { get; set; }
         public EstadoPasoSolicitud Estado { get; set; } = EstadoPasoSolicitud.Pendiente; // Estado por defecto
-        public string Nombre { get; set; }
+        public string Nombre { get; set; } = string.Empty;
         public ReglaAprobacion? ReglaAprobacion { get; set; } // Opcional para tipos Inicio y Fin
         public List<RelacionInputCreateDto>? Inputs { get; set; } // Incluye detalles al crear
         public int? PosX { get; set; }
@@ -21,7 +21,8 @@ namespace FluentisCore.DTO
 
     public class PasoSolicitudUpdateDto
     {
-        public EstadoPasoSolicitud Estado { get; set; } = EstadoPasoSolicitud.Pendiente; // Estado por defecto
+        // Hacer opcional para permitir actualizaciones parciales sin forzar estado a Pendiente
+        public EstadoPasoSolicitud? Estado { get; set; }
         public DateTime? FechaFin { get; set; }
         public int? ResponsableId { get; set; }
         public string? Nombre { get; set; }
