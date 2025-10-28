@@ -40,6 +40,7 @@ namespace FluentisCore.Models
         public DbSet<RelacionDecisionUsuario> DecisionesUsuario { get; set; }
         public DbSet<Delegacion> Delegaciones { get; set; }
         public DbSet<RelacionUsuarioGrupo> RelacionesUsuarioGrupo { get; set; }
+        public DbSet<RelacionVisualizador> RelacionesVisualizadores { get; set; }
 
         // Tablas de CommentAndNotificationManagement
         public DbSet<Comentario> Comentarios { get; set; }
