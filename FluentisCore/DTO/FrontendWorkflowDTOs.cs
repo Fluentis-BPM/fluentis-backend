@@ -21,6 +21,9 @@ namespace FluentisCore.DTO
         // Frontend expects: 'encurso' | 'finalizado' | 'cancelado'
         [JsonPropertyName("estado")] public string Estado { get; set; } = "encurso";
 
+        // Roles del usuario en este flujo (visualizador, aprobador, ejecutor, creador)
+        [JsonPropertyName("roles_usuario")] public List<string>? RolesUsuario { get; set; }
+
         // Optional extra fields for future use
         [JsonPropertyName("datos_solicitud")] public Dictionary<string, string>? DatosSolicitud { get; set; }
         [JsonPropertyName("campos_dinamicos")] public Dictionary<string, string>? CamposDinamicos { get; set; }

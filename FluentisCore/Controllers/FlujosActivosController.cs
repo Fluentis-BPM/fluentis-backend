@@ -82,6 +82,32 @@ namespace FluentisCore.Controllers
             return list.Select(f => f.ToFrontendDto()).ToList();
         }
 
+        // GET: api/FlujosActivos/usuario/{usuarioId}
+        [HttpGet("usuario/{usuarioId}")]
+        public async Task<ActionResult<IEnumerable<FlujoActivoFrontendDto>>> GetFlujosByUsuario(
+            int usuarioId,
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null,
+            [FromQuery] EstadoFlujoActivo? estado = null)
+        {
+            // Verificar que el usuario existe
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado." });
+            }
+
+            // Llamar al servicio para obtener los flujos
+            var resultado = await _workflowService.GetFlujosByUsuario(
+                usuarioId, 
+                fechaInicio, 
+                fechaFin, 
+                estado, 
+                _context);
+
+            return Ok(resultado);
+        }
+
         // GET: api/FlujosActivos/5
         [HttpGet("{id}")]
         public async Task<ActionResult<FlujoActivoFrontendDto>> GetFlujoActivo(int id)
@@ -141,6 +167,114 @@ namespace FluentisCore.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/FlujosActivos/{id}/visualizadores
+        [HttpPost("{id}/visualizadores")]
+        public async Task<IActionResult> AddVisualizadores(int id, [FromBody] List<int> usuarioIds)
+        {
+            // Verificar que el flujo activo existe
+            var flujoActivo = await _context.FlujosActivos.FindAsync(id);
+            if (flujoActivo == null)
+            {
+                return NotFound(new { message = "Flujo activo no encontrado." });
+            }
+
+            if (usuarioIds == null || !usuarioIds.Any())
+            {
+                return BadRequest(new { message = "Debe proporcionar al menos un ID de usuario." });
+            }
+
+            var errores = new List<string>();
+            var agregados = new List<int>();
+
+            foreach (var usuarioId in usuarioIds)
+            {
+                // Verificar que el usuario existe
+                var usuario = await _context.Usuarios.FindAsync(usuarioId);
+                if (usuario == null)
+                {
+                    errores.Add($"Usuario con ID {usuarioId} no encontrado.");
+                    continue;
+                }
+
+                // Verificar si ya existe la relación
+                var relacionExistente = await _context.RelacionesVisualizadores
+                    .FirstOrDefaultAsync(rv => rv.FlujoActivoId == id && rv.UsuarioId == usuarioId);
+
+                if (relacionExistente != null)
+                {
+                    errores.Add($"Usuario con ID {usuarioId} ya es visualizador de este flujo.");
+                    continue;
+                }
+
+                // Crear la relación
+                var nuevaRelacion = new FluentisCore.Models.InputAndApprovalManagement.RelacionVisualizador
+                {
+                    FlujoActivoId = id,
+                    UsuarioId = usuarioId
+                };
+
+                _context.RelacionesVisualizadores.Add(nuevaRelacion);
+                agregados.Add(usuarioId);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = $"Se agregaron {agregados.Count} visualizador(es) al flujo activo.",
+                agregados,
+                errores = errores.Any() ? errores : null
+            });
+        }
+
+        // GET: api/FlujosActivos/{id}/visualizadores
+        [HttpGet("{id}/visualizadores")]
+        public async Task<ActionResult<IEnumerable<object>>> GetVisualizadores(int id)
+        {
+            var flujoActivo = await _context.FlujosActivos.FindAsync(id);
+            if (flujoActivo == null)
+            {
+                return NotFound(new { message = "Flujo activo no encontrado." });
+            }
+
+            var visualizadores = await _context.RelacionesVisualizadores
+                .Where(rv => rv.FlujoActivoId == id)
+                .Include(rv => rv.Usuario)
+                    .ThenInclude(u => u.Departamento)
+                .Include(rv => rv.Usuario)
+                    .ThenInclude(u => u.Cargo)
+                .Select(rv => new
+                {
+                    idRelacion = rv.IdRelacion,
+                    usuarioId = rv.UsuarioId,
+                    nombre = rv.Usuario.Nombre,
+                    email = rv.Usuario.Email,
+                    departamento = rv.Usuario.Departamento != null ? rv.Usuario.Departamento.Nombre : null,
+                    cargo = rv.Usuario.Cargo != null ? rv.Usuario.Cargo.Nombre : null
+                })
+                .ToListAsync();
+
+            return Ok(visualizadores);
+        }
+
+        // DELETE: api/FlujosActivos/{id}/visualizadores/{usuarioId}
+        [HttpDelete("{id}/visualizadores/{usuarioId}")]
+        public async Task<IActionResult> RemoveVisualizador(int id, int usuarioId)
+        {
+            var relacion = await _context.RelacionesVisualizadores
+                .FirstOrDefaultAsync(rv => rv.FlujoActivoId == id && rv.UsuarioId == usuarioId);
+
+            if (relacion == null)
+            {
+                return NotFound(new { message = "La relación de visualizador no existe." });
+            }
+
+            _context.RelacionesVisualizadores.Remove(relacion);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Visualizador removido exitosamente." });
         }
 
         private bool FlujoActivoExists(int id)
