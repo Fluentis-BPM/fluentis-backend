@@ -573,21 +573,37 @@ namespace FluentisCore.Controllers
                 return BadRequest("No hay grupo de aprobación asociado.");
             }
 
-            var decision = new RelacionDecisionUsuario
+            // Evitar votos duplicados por el mismo usuario en el mismo grupo/relación
+            var existing = await _context.DecisionesUsuario
+                .FirstOrDefaultAsync(d => d.RelacionGrupoAprobacionId == relacionGrupo.IdRelacion && d.IdUsuario == dto.IdUsuario);
+
+            if (existing != null)
             {
-                RelacionGrupoAprobacionId = relacionGrupo.IdRelacion,
-                IdUsuario = dto.IdUsuario,
-                Decision = dto.Decision,
-                FechaDecision = DateTime.UtcNow
-            };
-            _context.DecisionesUsuario.Add(decision);
-            await _context.SaveChangesAsync();
+                // Idempotente: actualizar la decisión existente y fecha
+                existing.Decision = dto.Decision;
+                existing.FechaDecision = DateTime.UtcNow;
+                _context.Entry(existing).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                var decision = new RelacionDecisionUsuario
+                {
+                    RelacionGrupoAprobacionId = relacionGrupo.IdRelacion,
+                    IdUsuario = dto.IdUsuario,
+                    Decision = dto.Decision,
+                    FechaDecision = DateTime.UtcNow
+                };
+                _context.DecisionesUsuario.Add(decision);
+                await _context.SaveChangesAsync();
+            }
 
             // Actualizar estado según regla de votación
             await UpdateEstadoPorVotacion(paso.IdPasoSolicitud);
 
             var pasoDto3 = paso.ToFrontendDto();
-            return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, pasoDto3);
+            // Responder 200 OK con el paso actualizado para evitar confusión con Location header
+            return Ok(pasoDto3);
         }
 
         // DELETE: api/pasosolicitudes/{id}/decisiones/{decisionId} (quitar decisión)
@@ -756,10 +772,17 @@ namespace FluentisCore.Controllers
 
             var estadoAnterior = paso.Estado;
             var grupo = paso.RelacionesGrupoAprobacion.GrupoAprobacion;
-            var decisiones = paso.RelacionesGrupoAprobacion.Decisiones;
+            var decisiones = paso.RelacionesGrupoAprobacion.Decisiones ?? new List<RelacionDecisionUsuario>();
             var totalUsuarios = grupo.RelacionesUsuarioGrupo.Count;
-            var aprobaciones = decisiones.Count(d => d.Decision == true);
-            var rechazos = decisiones.Count(d => d.Decision == false);
+
+            // Consolidar por usuario (última decisión por usuario prevalece) para evitar duplicados
+            var decisionesPorUsuario = decisiones
+                .GroupBy(d => d.IdUsuario)
+                .Select(g => g.OrderByDescending(x => x.FechaDecision).First())
+                .ToList();
+
+            var aprobaciones = decisionesPorUsuario.Count(d => d.Decision == true);
+            var rechazos = decisionesPorUsuario.Count(d => d.Decision == false);
 
             switch (paso.ReglaAprobacion)
             {
