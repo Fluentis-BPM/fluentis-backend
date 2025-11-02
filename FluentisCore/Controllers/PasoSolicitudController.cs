@@ -573,36 +573,80 @@ namespace FluentisCore.Controllers
                 return BadRequest("No hay grupo de aprobación asociado.");
             }
 
-            // Evitar votos duplicados por el mismo usuario en el mismo grupo/relación
-            var existing = await _context.DecisionesUsuario
-                .FirstOrDefaultAsync(d => d.RelacionGrupoAprobacionId == relacionGrupo.IdRelacion && d.IdUsuario == dto.IdUsuario);
-
-            if (existing != null)
+            // Ejecutar toda la operación en una transacción resiliente para consistencia
+            var strategy = _context.Database.CreateExecutionStrategy();
+            PasoSolicitud pasoActualizado;
+            await strategy.ExecuteAsync(async () =>
             {
-                // Idempotente: actualizar la decisión existente y fecha
-                existing.Decision = dto.Decision;
-                existing.FechaDecision = DateTime.UtcNow;
-                _context.Entry(existing).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                var decision = new RelacionDecisionUsuario
+                await using var tx = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    RelacionGrupoAprobacionId = relacionGrupo.IdRelacion,
-                    IdUsuario = dto.IdUsuario,
-                    Decision = dto.Decision,
-                    FechaDecision = DateTime.UtcNow
-                };
-                _context.DecisionesUsuario.Add(decision);
-                await _context.SaveChangesAsync();
-            }
+                    // Upsert de decisión (idempotente)
+                    var existing = await _context.DecisionesUsuario
+                        .FirstOrDefaultAsync(d => d.RelacionGrupoAprobacionId == relacionGrupo.IdRelacion && d.IdUsuario == dto.IdUsuario);
 
-            // Actualizar estado según regla de votación
-            await UpdateEstadoPorVotacion(paso.IdPasoSolicitud);
+                    if (existing != null)
+                    {
+                        existing.Decision = dto.Decision;
+                        existing.FechaDecision = DateTime.UtcNow;
+                        _context.Entry(existing).State = EntityState.Modified;
+                    }
+                    else
+                    {
+                        var decision = new RelacionDecisionUsuario
+                        {
+                            RelacionGrupoAprobacionId = relacionGrupo.IdRelacion,
+                            IdUsuario = dto.IdUsuario,
+                            Decision = dto.Decision,
+                            FechaDecision = DateTime.UtcNow
+                        };
+                        _context.DecisionesUsuario.Add(decision);
+                    }
+                    await _context.SaveChangesAsync();
 
-            var pasoDto3 = paso.ToFrontendDto();
-            // Responder 200 OK con el paso actualizado para evitar confusión con Location header
+                    if (dto.Decision == false)
+                    {
+                        // Soft reset: dejar el mismo paso en 'Pendiente', limpiar decisiones del paso y no tocar otros nodos
+                        var pasoDb = await _context.PasosSolicitud.FirstOrDefaultAsync(p => p.IdPasoSolicitud == id);
+                        if (pasoDb != null)
+                        {
+                            pasoDb.Estado = EstadoPasoSolicitud.Pendiente;
+                            pasoDb.FechaFin = null; // opcional
+                            _context.Entry(pasoDb).State = EntityState.Modified;
+                            await _context.SaveChangesAsync();
+                        }
+
+                        // Eliminar SOLO decisiones de este paso (usando el Id de la relación para evitar joins en ExecuteDelete)
+                        await _context.DecisionesUsuario
+                            .Where(d => d.RelacionGrupoAprobacionId == relacionGrupo.IdRelacion)
+                            .ExecuteDeleteAsync();
+
+                        await _context.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        // Si es aprobación (true), mantener comportamiento actual de consolidación de votos
+                        await UpdateEstadoPorVotacion(id);
+                    }
+
+                    await tx.CommitAsync();
+                }
+                catch
+                {
+                    await tx.RollbackAsync();
+                    throw;
+                }
+            });
+
+            // Cargar estado fresco para responder
+            pasoActualizado = await _context.PasosSolicitud
+                .Include(p => p.RelacionesInput)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                .Include(p => p.Comentarios)
+                .Include(p => p.Excepciones)
+                .FirstOrDefaultAsync(p => p.IdPasoSolicitud == id) ?? paso;
+
+            var pasoDto3 = pasoActualizado.ToFrontendDto();
             return Ok(pasoDto3);
         }
 
