@@ -19,11 +19,13 @@ namespace FluentisCore.Controllers
     {
         private readonly FluentisContext _context;
         private readonly IWorkflowService _workflowService;
+        private readonly NotificationService _notificationService;
 
-        public FlujosActivosController(FluentisContext context, IWorkflowService workflowService)
+        public FlujosActivosController(FluentisContext context, IWorkflowService workflowService, NotificationService notificationService)
         {
             _context = context;
             _workflowService = workflowService;
+            _notificationService = notificationService;
         }
 
         // GET: api/FlujosActivos/pasos/{flujoActivoId}
@@ -156,6 +158,33 @@ namespace FluentisCore.Controllers
             await _context.SaveChangesAsync();
             await _context.Entry(model).Reference(m => m.FlujoEjecucion).LoadAsync();
             await _context.Entry(model).Reference(m => m.Solicitud).LoadAsync();
+
+            // Notificar inicio del flujo
+            try
+            {
+                // Obtener el primer paso activo del flujo para notificar a su responsable
+                var primerPaso = await _context.PasosSolicitud
+                    .Where(p => p.FlujoActivoId == model.IdFlujoActivo && 
+                                p.Estado == EstadoPasoSolicitud.Pendiente &&
+                                p.ResponsableId.HasValue)
+                    .OrderBy(p => p.FechaInicio)
+                    .FirstOrDefaultAsync();
+
+                if (primerPaso != null && primerPaso.ResponsableId.HasValue)
+                {
+                    var nombreSolicitud = model.Solicitud?.Nombre ?? "";
+                    await _notificationService.NotificarInicioFlujoAsync(
+                        primerPaso.ResponsableId.Value,
+                        model.Nombre ?? "flujo",
+                        nombreSolicitud
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al notificar inicio de flujo: {ex.Message}");
+            }
+
             return CreatedAtAction(nameof(GetFlujoActivo), new { id = model.IdFlujoActivo }, model.ToFrontendDto());
         }
 

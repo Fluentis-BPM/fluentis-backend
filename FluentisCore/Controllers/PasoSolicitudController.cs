@@ -23,11 +23,13 @@ namespace FluentisCore.Controllers
     {
         private readonly FluentisContext _context;
         private readonly WorkflowInitializationService _workflowService;
+        private readonly NotificationService _notificationService;
 
-        public PasoSolicitudController(FluentisContext context, WorkflowInitializationService workflowService)
+        public PasoSolicitudController(FluentisContext context, WorkflowInitializationService workflowService, NotificationService notificationService)
         {
             _context = context;
             _workflowService = workflowService;
+            _notificationService = notificationService;
         }
 
         // POST: api/pasosolicitudes
@@ -104,6 +106,31 @@ namespace FluentisCore.Controllers
                     }
                 }
                 await _context.SaveChangesAsync();
+            }
+
+            // Notificaciones según tipo de paso
+            try
+            {
+                var solicitud = await _context.FlujosActivos
+                    .Where(f => f.IdFlujoActivo == dto.FlujoActivoId)
+                    .Select(f => new { f.Nombre })
+                    .FirstOrDefaultAsync();
+
+                if (dto.TipoPaso == TipoPaso.Ejecucion && dto.ResponsableId.HasValue)
+                {
+                    // Notificar asignación de paso de ejecución
+                    await _notificationService.NotificarAsignacionPasoAsync(
+                        dto.ResponsableId.Value,
+                        paso.IdPasoSolicitud,
+                        dto.Nombre,
+                        solicitud?.Nombre ?? ""
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                // No fallar la creación del paso si falla la notificación
+                Console.WriteLine($"Error al enviar notificación: {ex.Message}");
             }
 
             // Devolver una representación plana para evitar ciclos de serialización
@@ -210,6 +237,8 @@ namespace FluentisCore.Controllers
                 return NotFound();
             }
 
+            var estadoAnterior = paso.Estado;
+
             // Validar y actualizar estado solo si viene en el DTO (evita resetear a Pendiente en PUT parciales)
             if (dto.Estado.HasValue)
             {
@@ -232,6 +261,8 @@ namespace FluentisCore.Controllers
                 paso.Estado = dto.Estado.Value;
             }
 
+            var responsableAnterior = paso.ResponsableId;
+            
             paso.FechaFin = dto.FechaFin ?? paso.FechaFin;
             if (paso.TipoPaso == TipoPaso.Ejecucion && dto.ResponsableId.HasValue)
             {
@@ -251,6 +282,42 @@ namespace FluentisCore.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Notificar cambio de estado si hubo uno
+                if (dto.Estado.HasValue && estadoAnterior != dto.Estado.Value && paso.ResponsableId.HasValue)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarCambioEstadoPasoAsync(
+                            paso.ResponsableId.Value,
+                            paso.Nombre,
+                            estadoAnterior.ToString(),
+                            dto.Estado.Value.ToString()
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error al notificar cambio de estado: {ex.Message}");
+                    }
+                }
+
+                // Notificar cambio de responsable si hubo uno
+                if (dto.ResponsableId.HasValue && responsableAnterior.HasValue && 
+                    responsableAnterior.Value != dto.ResponsableId.Value)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarCambioResponsableAsync(
+                            responsableAnterior.Value,
+                            dto.ResponsableId.Value,
+                            paso.Nombre
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error al notificar cambio de responsable: {ex.Message}");
+                    }
+                }
 
                 // Verificar si el paso se completó (Aprobado o Entregado) y si debe finalizar el flujo
                 if (dto.Estado.HasValue &&
@@ -395,6 +462,25 @@ namespace FluentisCore.Controllers
             _context.RelacionesGrupoAprobacion.Add(relacion);
             await _context.SaveChangesAsync();
 
+            // Notificar a todos los usuarios del grupo de aprobación
+            try
+            {
+                var solicitud = await _context.FlujosActivos
+                    .Where(f => f.IdFlujoActivo == paso.FlujoActivoId)
+                    .Select(f => new { f.Nombre })
+                    .FirstOrDefaultAsync();
+
+                await _notificationService.NotificarGrupoAprobacionAsync(
+                    dto.GrupoAprobacionId,
+                    $"Se requiere tu aprobación para el paso '{paso.Nombre}' en '{solicitud?.Nombre ?? "solicitud"}'",
+                    PrioridadNotificacion.Alta
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al enviar notificación a grupo: {ex.Message}");
+            }
+
             // Map to DTO and return 201 pointing to the paso resource
             var resultDto = relacion.ToDto();
             return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, resultDto);
@@ -457,6 +543,28 @@ namespace FluentisCore.Controllers
             _context.Comentarios.Add(comentario);
             await _context.SaveChangesAsync();
 
+            // Notificar al responsable del paso si no es quien comenta
+            try
+            {
+                if (paso.ResponsableId.HasValue && paso.ResponsableId.Value != dto.UsuarioId)
+                {
+                    var usuario = await _context.Usuarios
+                        .Where(u => u.IdUsuario == dto.UsuarioId)
+                        .Select(u => u.Nombre)
+                        .FirstOrDefaultAsync();
+
+                    await _notificationService.NotificarComentarioAgregadoAsync(
+                        paso.ResponsableId.Value,
+                        paso.Nombre,
+                        usuario ?? "Un usuario"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al enviar notificación de comentario: {ex.Message}");
+            }
+
             var pasoDto = paso.ToFrontendDto();
             return CreatedAtAction(nameof(GetPasoSolicitud), new { id }, pasoDto);
         }
@@ -509,6 +617,34 @@ namespace FluentisCore.Controllers
                 paso.Estado = EstadoPasoSolicitud.Excepcion;
                 _context.Entry(paso).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
+            }
+
+            // Notificar excepción crítica al responsable y supervisores
+            try
+            {
+                var usuariosANotificar = new List<int>();
+                
+                // Agregar responsable del paso si existe
+                if (paso.ResponsableId.HasValue)
+                {
+                    usuariosANotificar.Add(paso.ResponsableId.Value);
+                }
+
+                // Aquí podrías agregar lógica para notificar a supervisores/administradores
+                // Por ahora solo notificamos al responsable
+                
+                if (usuariosANotificar.Any())
+                {
+                    await _notificationService.NotificarExcepcionPasoAsync(
+                        usuariosANotificar,
+                        paso.Nombre,
+                        dto.Motivo
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al enviar notificación de excepción: {ex.Message}");
             }
 
             var pasoDto2 = paso.ToFrontendDto();
@@ -623,6 +759,36 @@ namespace FluentisCore.Controllers
                 .Include(p => p.Comentarios)
                 .Include(p => p.Excepciones)
                 .FirstOrDefaultAsync(p => p.IdPasoSolicitud == id) ?? paso;
+
+            // Notificar decisión de aprobación/rechazo
+            try
+            {
+                var flujo = await _context.FlujosActivos
+                    .Where(f => f.IdFlujoActivo == pasoActualizado.FlujoActivoId)
+                    .FirstOrDefaultAsync();
+                
+                var usuario = await _context.Usuarios
+                    .Where(u => u.IdUsuario == dto.IdUsuario)
+                    .Select(u => u.Nombre)
+                    .FirstOrDefaultAsync();
+
+                // Notificar al creador de la solicitud (si existe el concepto)
+                // Por ahora notificamos al responsable del paso si existe
+                if (pasoActualizado.ResponsableId.HasValue && pasoActualizado.ResponsableId.Value != dto.IdUsuario)
+                {
+                    await _notificationService.NotificarDecisionAprobacionAsync(
+                        pasoActualizado.ResponsableId.Value,
+                        pasoActualizado.Nombre,
+                        usuario ?? "Un aprobador",
+                        dto.Decision,
+                        ""
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al enviar notificación de decisión: {ex.Message}");
+            }
 
             var pasoDto3 = pasoActualizado.ToFrontendDto();
             return Ok(pasoDto3);
@@ -830,6 +996,43 @@ namespace FluentisCore.Controllers
 
             _context.Entry(paso).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+
+            // Notificar cambio de estado por votación si cambió
+            if (estadoAnterior != paso.Estado)
+            {
+                try
+                {
+                    // Notificar a todos los miembros del grupo sobre el resultado
+                    var usuariosGrupo = grupo.RelacionesUsuarioGrupo
+                        .Select(r => r.UsuarioId)
+                        .ToList();
+
+                    var mensaje = paso.Estado == EstadoPasoSolicitud.Aprobado
+                        ? $"✅ El paso '{paso.Nombre}' ha sido APROBADO por votación"
+                        : $"❌ El paso '{paso.Nombre}' ha sido RECHAZADO por votación";
+
+                    await _notificationService.CrearNotificacionesMasivasAsync(
+                        usuariosGrupo,
+                        mensaje,
+                        PrioridadNotificacion.Alta
+                    );
+
+                    // Notificar al responsable del paso si existe
+                    if (paso.ResponsableId.HasValue && !usuariosGrupo.Contains(paso.ResponsableId.Value))
+                    {
+                        await _notificationService.NotificarCambioEstadoPasoAsync(
+                            paso.ResponsableId.Value,
+                            paso.Nombre,
+                            estadoAnterior.ToString(),
+                            paso.Estado.ToString()
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al notificar cambio de estado por votación: {ex.Message}");
+                }
+            }
 
             // Si el paso se aprobó, verificar si el flujo debe finalizarse
             if (estadoAnterior != EstadoPasoSolicitud.Aprobado && paso.Estado == EstadoPasoSolicitud.Aprobado)
