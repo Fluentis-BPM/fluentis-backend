@@ -604,30 +604,8 @@ namespace FluentisCore.Controllers
                     }
                     await _context.SaveChangesAsync();
 
-                    if (dto.Decision == false)
-                    {
-                        // Soft reset: dejar el mismo paso en 'Pendiente', limpiar decisiones del paso y no tocar otros nodos
-                        var pasoDb = await _context.PasosSolicitud.FirstOrDefaultAsync(p => p.IdPasoSolicitud == id);
-                        if (pasoDb != null)
-                        {
-                            pasoDb.Estado = EstadoPasoSolicitud.Pendiente;
-                            pasoDb.FechaFin = null; // opcional
-                            _context.Entry(pasoDb).State = EntityState.Modified;
-                            await _context.SaveChangesAsync();
-                        }
-
-                        // Eliminar SOLO decisiones de este paso (usando el Id de la relación para evitar joins en ExecuteDelete)
-                        await _context.DecisionesUsuario
-                            .Where(d => d.RelacionGrupoAprobacionId == relacionGrupo.IdRelacion)
-                            .ExecuteDeleteAsync();
-
-                        await _context.SaveChangesAsync();
-                    }
-                    else
-                    {
-                        // Si es aprobación (true), mantener comportamiento actual de consolidación de votos
-                        await UpdateEstadoPorVotacion(id);
-                    }
+                    await UpdateEstadoPorVotacion(id);
+                    
 
                     await tx.CommitAsync();
                 }
