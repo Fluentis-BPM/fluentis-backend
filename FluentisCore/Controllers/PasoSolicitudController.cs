@@ -936,6 +936,10 @@ namespace FluentisCore.Controllers
                 .Include(p => p.RelacionesGrupoAprobacion)
                     .ThenInclude(r => r.GrupoAprobacion)
                         .ThenInclude(g => g.RelacionesUsuarioGrupo)
+                            .ThenInclude(rug => rug.Usuario)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                    .ThenInclude(r => r.Decisiones)
+                    .ThenInclude(d => d.Usuario)
                 .Include(p => p.Comentarios)
                 .Include(p => p.Excepciones)
                 .FirstOrDefaultAsync(p => p.IdPasoSolicitud == id);
@@ -1041,6 +1045,10 @@ namespace FluentisCore.Controllers
                 .Include(p => p.RelacionesGrupoAprobacion)
                     .ThenInclude(rga => rga.GrupoAprobacion)
                         .ThenInclude(ga => ga.RelacionesUsuarioGrupo)
+                            .ThenInclude(rug => rug.Usuario)
+                .Include(p => p.RelacionesGrupoAprobacion)
+                    .ThenInclude(rga => rga.Decisiones)
+                    .ThenInclude(d => d.Usuario)
                 .Include(p => p.Comentarios)
                 .Include(p => p.Excepciones)
                 .AsQueryable();

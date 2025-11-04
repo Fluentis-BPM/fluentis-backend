@@ -49,6 +49,22 @@ namespace FluentisCore.DTO
         [JsonPropertyName("id_relacion")] public int IdRelacion { get; set; }
         [JsonPropertyName("grupo_aprobacion_id")] public int GrupoAprobacionId { get; set; }
         [JsonPropertyName("paso_solicitud_id")] public int PasoSolicitudId { get; set; }
+        [JsonPropertyName("usuarios_grupo")] public List<UsuarioGrupoAprobacionDto> UsuariosGrupo { get; set; } = new();
+        [JsonPropertyName("decisiones")] public List<RelacionDecisionUsuarioFrontendDto> Decisiones { get; set; } = new();
+    }
+
+    public class UsuarioGrupoAprobacionDto
+    {
+        [JsonPropertyName("id_usuario")] public int IdUsuario { get; set; }
+        [JsonPropertyName("nombre")] public string Nombre { get; set; } = string.Empty;
+    }
+
+    public class RelacionDecisionUsuarioFrontendDto
+    {
+        [JsonPropertyName("id_usuario")] public int IdUsuario { get; set; }
+        [JsonPropertyName("nombre_usuario")] public string NombreUsuario { get; set; } = string.Empty;
+        [JsonPropertyName("decision")] public bool? Decision { get; set; }
+        [JsonPropertyName("fecha_decision")] public DateTime FechaDecision { get; set; }
     }
 
     public class ComentarioFrontendDto
