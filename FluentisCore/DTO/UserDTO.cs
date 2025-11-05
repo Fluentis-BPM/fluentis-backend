@@ -38,5 +38,20 @@ namespace FluentisCore.DTO
         public int? CargoId { get; set; }
         public string? CargoNombre { get; set; }
     }
+
+    public class SetDepartamentoDto
+    {
+        public int? DepartamentoId { get; set; }
+    }
+
+    public class SetRolDto
+    {
+        public int? RolId { get; set; }
+    }
+
+    public class SetCargoDto
+    {
+        public int? CargoId { get; set; }
+    }
 }
 

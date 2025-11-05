@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
+using FluentisCore.DTO;
 using Microsoft.AspNetCore.Authorization;
 using FluentisCore.Auth;
 
@@ -26,16 +27,59 @@ namespace FluentisCore.Controllers
 
         // GET: api/Rols
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Rol>>> GetRoles()
+        public async Task<ActionResult<IEnumerable<RolDto>>> GetRoles()
         {
-            return await _context.Roles.ToListAsync();
+            var result = await _context.Roles
+                .Include(r => r.Usuarios)
+                .Select(r => new RolDto
+                {
+                    IdRol = r.IdRol,
+                    Nombre = r.Nombre,
+                    Usuarios = r.Usuarios.Select(u => new UsuarioDto
+                    {
+                        IdUsuario = u.IdUsuario,
+                        Nombre = u.Nombre,
+                        Email = u.Email,
+                        Oid = u.Oid,
+                        DepartamentoId = u.DepartamentoId,
+                        DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                        RolId = u.RolId,
+                        RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                        CargoId = u.CargoId,
+                        CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return result;
         }
 
         // GET: api/Rols/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Rol>> GetRol(int id)
+        public async Task<ActionResult<RolDto>> GetRol(int id)
         {
-            var rol = await _context.Roles.FindAsync(id);
+            var rol = await _context.Roles
+                .Include(r => r.Usuarios)
+                .Where(r => r.IdRol == id)
+                .Select(r => new RolDto
+                {
+                    IdRol = r.IdRol,
+                    Nombre = r.Nombre,
+                    Usuarios = r.Usuarios.Select(u => new UsuarioDto
+                    {
+                        IdUsuario = u.IdUsuario,
+                        Nombre = u.Nombre,
+                        Email = u.Email,
+                        Oid = u.Oid,
+                        DepartamentoId = u.DepartamentoId,
+                        DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                        RolId = u.RolId,
+                        RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                        CargoId = u.CargoId,
+                        CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
 
             if (rol == null)
             {

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FluentisCore.Models;
 using FluentisCore.Models.UserManagement;
+using FluentisCore.DTO;
 using Microsoft.AspNetCore.Authorization;
 using FluentisCore.Auth;
 
@@ -26,16 +27,59 @@ namespace FluentisCore.Controllers
 
         // GET: api/Departamentos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Departamento>>> GetDepartamentos()
+        public async Task<ActionResult<IEnumerable<DepartamentoDto>>> GetDepartamentos()
         {
-            return await _context.Departamentos.ToListAsync();
+            var result = await _context.Departamentos
+                .Include(d => d.Usuarios)
+                .Select(d => new DepartamentoDto
+                {
+                    IdDepartamento = d.IdDepartamento,
+                    Nombre = d.Nombre,
+                    Usuarios = d.Usuarios.Select(u => new UsuarioDto
+                    {
+                        IdUsuario = u.IdUsuario,
+                        Nombre = u.Nombre,
+                        Email = u.Email,
+                        Oid = u.Oid,
+                        DepartamentoId = u.DepartamentoId,
+                        DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                        RolId = u.RolId,
+                        RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                        CargoId = u.CargoId,
+                        CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return result;
         }
 
         // GET: api/Departamentos/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Departamento>> GetDepartamento(int id)
+        public async Task<ActionResult<DepartamentoDto>> GetDepartamento(int id)
         {
-            var departamento = await _context.Departamentos.FindAsync(id);
+            var departamento = await _context.Departamentos
+                .Include(d => d.Usuarios)
+                .Where(d => d.IdDepartamento == id)
+                .Select(d => new DepartamentoDto
+                {
+                    IdDepartamento = d.IdDepartamento,
+                    Nombre = d.Nombre,
+                    Usuarios = d.Usuarios.Select(u => new UsuarioDto
+                    {
+                        IdUsuario = u.IdUsuario,
+                        Nombre = u.Nombre,
+                        Email = u.Email,
+                        Oid = u.Oid,
+                        DepartamentoId = u.DepartamentoId,
+                        DepartamentoNombre = u.Departamento != null ? u.Departamento.Nombre : null,
+                        RolId = u.RolId,
+                        RolNombre = u.Rol != null ? u.Rol.Nombre : null,
+                        CargoId = u.CargoId,
+                        CargoNombre = u.Cargo != null ? u.Cargo.Nombre : null
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
 
             if (departamento == null)
             {
