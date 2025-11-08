@@ -185,6 +185,19 @@ namespace FluentisCore.Controllers
                 }
                 await _context.SaveChangesAsync();
 
+                // Notificar a cada usuario agregado durante la creación del grupo
+                foreach (var usuarioId in dto.UsuarioIds)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarAgregarGrupoAsync(usuarioId, grupo.Nombre);
+                    }
+                    catch (Exception notifEx)
+                    {
+                        _logger.LogWarning(notifEx, $"No se pudo notificar al usuario {usuarioId} en creación de grupo {grupo.IdGrupo}");
+                    }
+                }
+
                 var g = await _context.GruposAprobacion
                     .Include(gr => gr.RelacionesUsuarioGrupo)
                         .ThenInclude(r => r.Usuario)
