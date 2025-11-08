@@ -51,7 +51,9 @@ namespace FluentisCore.Models.CommentAndNotificationManagement
 
         public bool Leida { get; set; }
 
-        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        // Fecha de envío gestionada por la aplicación (se asigna en el servicio)
+        // Antes estaba marcada como Computed y EF no incluía el valor en el INSERT,
+        // lo que podía impedir guardar la notificación si la columna no tenía default en DB.
         public DateTime FechaEnvio { get; set; }
     }
 }
