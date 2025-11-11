@@ -22,8 +22,9 @@ public class WorkflowResetService
     /// Resetea todos los pasos intermedios entre el paso origen y destino de un camino de excepción.
     /// Utiliza BFS (Breadth-First Search) para encontrar todos los pasos en el camino normal
     /// que deben ser reseteados cuando se toma una ruta de excepción.
+    /// INCLUYE el paso origen (el que fue rechazado) en el reset.
     /// </summary>
-    /// <param name="pasoOrigenId">ID del paso desde donde se origina la excepción</param>
+    /// <param name="pasoOrigenId">ID del paso desde donde se origina la excepción (será reseteado)</param>
     /// <param name="pasoDestinoId">ID del paso destino de la excepción</param>
     /// <param name="flujoActivoId">ID del flujo activo</param>
     public async Task ResetearPasosIntermediosAsync(int pasoOrigenId, int pasoDestinoId, int flujoActivoId)
@@ -51,13 +52,21 @@ public class WorkflowResetService
             todasConexiones
         );
 
-        Console.WriteLine($"📋 Pasos a resetear: {pasosAResetear.Count}");
+        // ✅ 4. NUEVO: Agregar el paso ORIGEN (el que fue rechazado) para que también se resetee
+        var pasoOrigen = todosPasos.FirstOrDefault(p => p.IdPasoSolicitud == pasoOrigenId);
+        if (pasoOrigen != null && !pasosAResetear.Contains(pasoOrigen))
+        {
+            pasosAResetear.Add(pasoOrigen);
+            Console.WriteLine($"   ✓ Paso origen {pasoOrigenId} ({pasoOrigen.Nombre}) agregado para reset");
+        }
+
+        Console.WriteLine($"📋 Pasos a resetear: {pasosAResetear.Count} (incluyendo paso rechazado)");
         foreach (var p in pasosAResetear)
         {
             Console.WriteLine($"   - Paso {p.IdPasoSolicitud}: {p.Nombre} (Tipo: {p.TipoPaso}, Estado: {p.Estado})");
         }
 
-        // 4. Resetear cada paso según su tipo
+        // 5. Resetear cada paso según su tipo
         foreach (var paso in pasosAResetear)
         {
             await ResetearPasoAsync(paso);
