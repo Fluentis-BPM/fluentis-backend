@@ -24,12 +24,18 @@ namespace FluentisCore.Controllers
         private readonly FluentisContext _context;
         private readonly WorkflowInitializationService _workflowService;
         private readonly NotificationService _notificationService;
+        private readonly WorkflowResetService _resetService;
 
-        public PasoSolicitudController(FluentisContext context, WorkflowInitializationService workflowService, NotificationService notificationService)
+        public PasoSolicitudController(
+            FluentisContext context, 
+            WorkflowInitializationService workflowService, 
+            NotificationService notificationService,
+            WorkflowResetService resetService)
         {
             _context = context;
             _workflowService = workflowService;
             _notificationService = notificationService;
+            _resetService = resetService;
         }
 
         // POST: api/pasosolicitudes
@@ -282,6 +288,13 @@ namespace FluentisCore.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                // ✅ NUEVO: Intentar avanzar el flujo cuando cambia el estado
+                if (dto.Estado.HasValue && estadoAnterior != dto.Estado.Value)
+                {
+                    Console.WriteLine($"🔄 Estado cambió de {estadoAnterior} a {dto.Estado.Value}. Intentando avanzar flujo...");
+                    await TryAdvanceFromPasoAsync(paso, estadoAnterior);
+                }
 
                 // Notificar cambio de estado si hubo uno
                 if (dto.Estado.HasValue && estadoAnterior != dto.Estado.Value && paso.ResponsableId.HasValue)
@@ -869,6 +882,12 @@ namespace FluentisCore.Controllers
                 return BadRequest("El paso destino no pertenece al mismo flujo activo.");
             }
 
+            // ✅ NUEVA VALIDACIÓN: Caminos de excepción solo pueden originarse desde pasos de Aprobación
+            if (dto.EsExcepcion && origen.TipoPaso != TipoPaso.Aprobacion)
+            {
+                return BadRequest("Los caminos de excepción solo pueden originarse desde pasos de tipo Aprobación.");
+            }
+
             var existente = await _context.ConexionesPasoSolicitud
                 .AnyAsync(c => c.PasoOrigenId == id && c.PasoDestinoId == dto.DestinoId);
             if (existente)
@@ -997,6 +1016,13 @@ namespace FluentisCore.Controllers
             _context.Entry(paso).State = EntityState.Modified;
             await _context.SaveChangesAsync();
 
+            // ✅ NUEVO: Intentar avanzar el flujo cuando cambia el estado por votación
+            if (estadoAnterior != paso.Estado)
+            {
+                Console.WriteLine($"🗳️  Estado cambió por votación de {estadoAnterior} a {paso.Estado}. Intentando avanzar flujo...");
+                await TryAdvanceFromPasoAsync(paso, estadoAnterior);
+            }
+
             // Notificar cambio de estado por votación si cambió
             if (estadoAnterior != paso.Estado)
             {
@@ -1084,10 +1110,32 @@ namespace FluentisCore.Controllers
                 .Where(c => c.PasoOrigenId == paso.IdPasoSolicitud && c.EsExcepcion == avanzarPorExcepcion)
                 .ToListAsync();
 
+            Console.WriteLine($"🔀 Paso {paso.IdPasoSolicitud} ({paso.Nombre}) busca conexiones. Excepción: {avanzarPorExcepcion}. Encontradas: {conexiones.Count}");
+
             foreach (var conexion in conexiones)
             {
                 var destino = await _context.PasosSolicitud.FirstOrDefaultAsync(p => p.IdPasoSolicitud == conexion.PasoDestinoId);
                 if (destino == null) continue;
+
+                // ✅ NUEVO: Si es camino de excepción, resetear pasos intermedios
+                if (avanzarPorExcepcion && conexion.EsExcepcion)
+                {
+                    Console.WriteLine($"⚠️  Camino de excepción detectado: {paso.IdPasoSolicitud} -> {destino.IdPasoSolicitud}");
+                    
+                    try
+                    {
+                        await _resetService.ResetearPasosIntermediosAsync(
+                            paso.IdPasoSolicitud,
+                            destino.IdPasoSolicitud,
+                            paso.FlujoActivoId
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Error al resetear pasos intermedios: {ex.Message}");
+                        // Continuar con la activación del destino aunque el reset falle
+                    }
+                }
 
                 // Para conexiones de éxito (normales): esperar a que todos los orígenes normales estén completos con éxito (manejo de unión)
                 if (!avanzarPorExcepcion)
@@ -1108,11 +1156,21 @@ namespace FluentisCore.Controllers
                         if (!todosListos)
                         {
                             // Aún no activar el destino hasta que lleguen todos los orígenes
+                            Console.WriteLine($"⏸️  Esperando que todos los orígenes normales completen antes de activar paso {destino.IdPasoSolicitud}");
                             continue;
                         }
                     }
                 }
 
+                // Activar el paso destino
+                destino.Estado = EstadoPasoSolicitud.Pendiente;
+                destino.FechaInicio = DateTime.UtcNow;
+                destino.FechaFin = null;
+                
+                _context.Entry(destino).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"✅ Paso {destino.IdPasoSolicitud} ({destino.Nombre}) activado como destino");
             }
         }
 

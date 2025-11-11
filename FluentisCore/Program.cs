@@ -92,6 +92,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 builder.Services.AddScoped<WorkflowInitializationService>();
+builder.Services.AddScoped<WorkflowResetService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IKpiService, KpiService>();
 builder.Services.AddScoped<NotificationService>();
