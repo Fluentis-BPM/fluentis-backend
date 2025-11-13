@@ -16,7 +16,7 @@ using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/pasosolicitudes")]
     [ApiController]
     [Authorize(Policy = "RequireAccessAsUser")]
     public class PasoSolicitudController : ControllerBase
@@ -279,6 +279,16 @@ namespace FluentisCore.Controllers
             {
                 paso.PosX = dto.PosX.Value;
                 paso.PosY = dto.PosY.Value;
+            }
+
+            // Actualizar ReglaAprobacion solo para pasos de tipo Aprobacion
+            if (dto.ReglaAprobacion.HasValue)
+            {
+                if (paso.TipoPaso != TipoPaso.Aprobacion)
+                {
+                    return BadRequest("ReglaAprobacion solo puede modificarse en pasos de tipo 'Aprobación'.");
+                }
+                paso.ReglaAprobacion = dto.ReglaAprobacion.Value;
             }
 
             // Recalcular tipo_flujo si hay cambios en caminos (simplificado, asumiendo actualización externa)
