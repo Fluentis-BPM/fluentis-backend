@@ -281,6 +281,12 @@ namespace FluentisCore.Controllers
                 paso.PosY = dto.PosY.Value;
             }
 
+            // Actualizar regla de aprobación si viene en el DTO y aplica
+            if (dto.ReglaAprobacion.HasValue && paso.TipoPaso == TipoPaso.Aprobacion)
+            {
+                paso.ReglaAprobacion = dto.ReglaAprobacion.Value;
+            }
+
             // Recalcular tipo_flujo si hay cambios en caminos (simplificado, asumiendo actualización externa)
             paso.TipoFlujo = await GetTipoFlujo(id);
             _context.Entry(paso).State = EntityState.Modified;
