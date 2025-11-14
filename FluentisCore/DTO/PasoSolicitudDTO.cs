@@ -28,6 +28,7 @@ namespace FluentisCore.DTO
         public string? Nombre { get; set; }
         public int? PosX { get; set; }
         public int? PosY { get; set; }
+        public ReglaAprobacion? ReglaAprobacion { get; set; }
     }
 
 

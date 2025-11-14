@@ -94,7 +94,23 @@ namespace FluentisCore.Extensions
                         {
                             IdRelacion = paso.RelacionesGrupoAprobacion.IdRelacion,
                             GrupoAprobacionId = paso.RelacionesGrupoAprobacion.GrupoAprobacionId,
-                            PasoSolicitudId = paso.RelacionesGrupoAprobacion.PasoSolicitudId ?? paso.IdPasoSolicitud
+                            PasoSolicitudId = paso.RelacionesGrupoAprobacion.PasoSolicitudId ?? paso.IdPasoSolicitud,
+                            UsuariosGrupo = paso.RelacionesGrupoAprobacion.GrupoAprobacion?.RelacionesUsuarioGrupo != null
+                                ? paso.RelacionesGrupoAprobacion.GrupoAprobacion.RelacionesUsuarioGrupo.Select(rug => new UsuarioGrupoAprobacionDto
+                                {
+                                    IdUsuario = rug.UsuarioId,
+                                    Nombre = rug.Usuario?.Nombre ?? "Usuario desconocido"
+                                }).ToList()
+                                : new List<UsuarioGrupoAprobacionDto>(),
+                            Decisiones = paso.RelacionesGrupoAprobacion.Decisiones != null 
+                                ? paso.RelacionesGrupoAprobacion.Decisiones.Select(d => new RelacionDecisionUsuarioFrontendDto
+                                {
+                                    IdUsuario = d.IdUsuario,
+                                    NombreUsuario = d.Usuario?.Nombre ?? "Usuario desconocido",
+                                    Decision = d.Decision,
+                                    FechaDecision = d.FechaDecision
+                                }).ToList()
+                                : new List<RelacionDecisionUsuarioFrontendDto>()
                         }
                     }
                     : new List<RelacionGrupoAprobacionFrontendDto>(),

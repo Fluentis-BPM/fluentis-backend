@@ -21,11 +21,13 @@ namespace FluentisCore.Controllers
     {
         private readonly FluentisContext _context;
         private readonly WorkflowInitializationService _workflowInitializationService;
+        private readonly NotificationService _notificationService;
 
-        public SolicitudesController(FluentisContext context, WorkflowInitializationService workflowInitializationService)
+        public SolicitudesController(FluentisContext context, WorkflowInitializationService workflowInitializationService, NotificationService notificationService)
         {
             _context = context;
             _workflowInitializationService = workflowInitializationService;
+            _notificationService = notificationService;
         }
 
         // GET: api/solicitudes
@@ -176,6 +178,19 @@ namespace FluentisCore.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Notificar al creador de la solicitud
+            try
+            {
+                await _notificationService.NotificarCreacionSolicitudAsync(
+                    solicitud.SolicitanteId,
+                    solicitud.Nombre
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al notificar creación de solicitud: {ex.Message}");
+            }
+
             return CreatedAtAction(nameof(GetSolicitud), new { id = solicitud.IdSolicitud }, solicitud.ToDto());
         }
 
@@ -224,6 +239,8 @@ namespace FluentisCore.Controllers
                 }
             }
 
+            var estadoAnterior = solicitud.Estado;
+            
             if (todasAprobadas && solicitud.GruposAprobacion.All(g => g.Decisiones.Any()))
             {
                 solicitud.Estado = EstadoSolicitud.Aprobado;
@@ -242,6 +259,24 @@ namespace FluentisCore.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+
+                // Notificar cambio de estado si hubo uno
+                if (estadoAnterior != solicitud.Estado)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarCambioEstadoSolicitudAsync(
+                            solicitud.SolicitanteId,
+                            solicitud.Nombre,
+                            estadoAnterior.ToString(),
+                            solicitud.Estado.ToString()
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error al notificar cambio de estado de solicitud: {ex.Message}");
+                    }
+                }
             }
             catch (DbUpdateConcurrencyException)
             {

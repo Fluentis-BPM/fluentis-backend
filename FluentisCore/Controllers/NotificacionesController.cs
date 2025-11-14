@@ -5,6 +5,7 @@ using FluentisCore.Auth;
 using FluentisCore.DTO;
 using FluentisCore.Models;
 using FluentisCore.Models.CommentAndNotificationManagement;
+using FluentisCore.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,10 +17,12 @@ namespace FluentisCore.Controllers
     public class NotificacionesController : ControllerBase
     {
         private readonly FluentisContext _context;
+        private readonly NotificationService _notificationService;
 
-        public NotificacionesController(FluentisContext context)
+        public NotificacionesController(FluentisContext context, NotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         // GET: api/Notificaciones
@@ -90,30 +93,28 @@ namespace FluentisCore.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var existsUsuario = await _context.Usuarios.AnyAsync(u => u.IdUsuario == dto.UsuarioId);
-            if (!existsUsuario) return NotFound("Usuario no encontrado.");
-
-            var model = new Notificacion
+            try
             {
-                UsuarioId = dto.UsuarioId,
-                Mensaje = dto.Mensaje,
-                Prioridad = dto.Prioridad,
-                Leida = false
-                // FechaEnvio es generado por la BD si está configurado como Computed
-            };
+                var notificacion = await _notificationService.CrearNotificacionAsync(
+                    dto.UsuarioId,
+                    dto.Mensaje,
+                    dto.Prioridad
+                );
 
-            _context.Notificaciones.Add(model);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetNotificacion), new { id = model.IdNotificacion }, new NotificacionDto
+                return CreatedAtAction(nameof(GetNotificacion), new { id = notificacion.IdNotificacion }, new NotificacionDto
+                {
+                    IdNotificacion = notificacion.IdNotificacion,
+                    UsuarioId = notificacion.UsuarioId,
+                    Mensaje = notificacion.Mensaje,
+                    Prioridad = notificacion.Prioridad,
+                    Leida = notificacion.Leida,
+                    FechaEnvio = notificacion.FechaEnvio
+                });
+            }
+            catch (ArgumentException ex)
             {
-                IdNotificacion = model.IdNotificacion,
-                UsuarioId = model.UsuarioId,
-                Mensaje = model.Mensaje,
-                Prioridad = model.Prioridad,
-                Leida = model.Leida,
-                FechaEnvio = model.FechaEnvio
-            });
+                return NotFound(ex.Message);
+            }
         }
 
         // PUT: api/Notificaciones/5
@@ -136,15 +137,28 @@ namespace FluentisCore.Controllers
         [HttpPost("{id}/leer")]
         public async Task<IActionResult> MarcarLeida(int id)
         {
-            var n = await _context.Notificaciones.FindAsync(id);
-            if (n == null) return NotFound();
-            if (!n.Leida)
-            {
-                n.Leida = true;
-                _context.Entry(n).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-            }
+            var resultado = await _notificationService.MarcarComoLeidaAsync(id);
+            if (!resultado) return NotFound();
             return NoContent();
+        }
+
+        // POST: api/Notificaciones/leer-multiples (marcar varias como leídas)
+        [HttpPost("leer-multiples")]
+        public async Task<IActionResult> MarcarVariasLeidas([FromBody] List<int> notificacionesIds)
+        {
+            if (notificacionesIds == null || !notificacionesIds.Any())
+                return BadRequest("Debe proporcionar al menos un ID de notificación.");
+
+            var count = await _notificationService.MarcarVariasComoLeidasAsync(notificacionesIds);
+            return Ok(new { marcadas = count });
+        }
+
+        // GET: api/Notificaciones/usuario/{usuarioId}/no-leidas-count
+        [HttpGet("usuario/{usuarioId}/no-leidas-count")]
+        public async Task<ActionResult<int>> GetNoLeidasCount(int usuarioId)
+        {
+            var count = await _notificationService.ObtenerNotificacionesNoLeidasCountAsync(usuarioId);
+            return Ok(new { usuarioId, noLeidas = count });
         }
 
         // DELETE: api/Notificaciones/5

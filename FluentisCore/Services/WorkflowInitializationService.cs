@@ -8,10 +8,12 @@ namespace FluentisCore.Services
     public class WorkflowInitializationService
     {
         private readonly FluentisContext _context;
+        private readonly NotificationService _notificationService;
 
-        public WorkflowInitializationService(FluentisContext context)
+        public WorkflowInitializationService(FluentisContext context, NotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -243,6 +245,55 @@ namespace FluentisCore.Services
 
                 await _context.SaveChangesAsync();
                 Console.WriteLine($"✅ Flujo {paso.FlujoActivoId} finalizado automáticamente");
+
+                // Notificar finalización del flujo
+                try
+                {
+                    // Obtener todos los usuarios involucrados en el flujo
+                    var usuariosInvolucrados = await _context.PasosSolicitud
+                        .Where(p => p.FlujoActivoId == paso.FlujoActivoId && p.ResponsableId.HasValue)
+                        .Select(p => p.ResponsableId!.Value)
+                        .Distinct()
+                        .ToListAsync();
+
+                    // Agregar usuarios de grupos de aprobación
+                    var usuariosGrupos = await _context.PasosSolicitud
+                        .Where(p => p.FlujoActivoId == paso.FlujoActivoId && p.TipoPaso == TipoPaso.Aprobacion)
+                        .SelectMany(p => p.RelacionesGrupoAprobacion.GrupoAprobacion.RelacionesUsuarioGrupo)
+                        .Select(r => r.UsuarioId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    usuariosInvolucrados.AddRange(usuariosGrupos);
+                    usuariosInvolucrados = usuariosInvolucrados.Distinct().ToList();
+
+                    if (usuariosInvolucrados.Any())
+                    {
+                        await _notificationService.NotificarFinalizacionFlujoAsync(
+                            usuariosInvolucrados,
+                            flujoActivo.Nombre ?? "flujo",
+                            "completado exitosamente"
+                        );
+                    }
+
+                    // Notificar al creador de la solicitud
+                    var solicitud = await _context.Solicitudes
+                        .Where(s => s.IdSolicitud == flujoActivo!.SolicitudId)
+                        .FirstOrDefaultAsync();
+                    
+                    if (solicitud != null && !usuariosInvolucrados.Contains(solicitud.SolicitanteId))
+                    {
+                        await _notificationService.CrearNotificacionAsync(
+                            solicitud.SolicitanteId,
+                            $"🎉 Tu solicitud '{solicitud.Nombre}' ha sido completada exitosamente",
+                            Models.CommentAndNotificationManagement.PrioridadNotificacion.Alta
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al notificar finalización del flujo: {ex.Message}");
+                }
             }
         }
     }

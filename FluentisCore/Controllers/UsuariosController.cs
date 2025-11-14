@@ -157,5 +157,44 @@ namespace FluentisCore.Controllers
         {
             return _context.Usuarios.Any(e => e.IdUsuario == id);
         }
+
+        // PUT: api/Usuarios/{id}/departamento
+        [HttpPut("{id}/departamento")]
+        public async Task<ActionResult<UsuarioDto>> SetUsuarioDepartamento(int id, [FromBody] SetDepartamentoDto dto)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound();
+
+            usuario.DepartamentoId = dto.DepartamentoId; // null => unassign
+            await _context.SaveChangesAsync();
+
+            return await GetUsuario(id);
+        }
+
+        // PUT: api/Usuarios/{id}/rol
+        [HttpPut("{id}/rol")]
+        public async Task<ActionResult<UsuarioDto>> SetUsuarioRol(int id, [FromBody] SetRolDto dto)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound();
+
+            usuario.RolId = dto.RolId; // null => unassign
+            await _context.SaveChangesAsync();
+
+            return await GetUsuario(id);
+        }
+
+        // PUT: api/Usuarios/{id}/cargo
+        [HttpPut("{id}/cargo")]
+        public async Task<ActionResult<UsuarioDto>> SetUsuarioCargo(int id, [FromBody] SetCargoDto dto)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null) return NotFound();
+
+            usuario.CargoId = dto.CargoId; // null => unassign
+            await _context.SaveChangesAsync();
+
+            return await GetUsuario(id);
+        }
     }
 }

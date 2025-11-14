@@ -9,6 +9,7 @@ using System.Linq;
 using FluentisCore.DTO;
 using System; // for Exception
 using Microsoft.Extensions.Logging; // added for ILogger
+using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
@@ -18,12 +19,14 @@ namespace FluentisCore.Controllers
     public class GrupoAprobacionesController : ControllerBase
     {
         private readonly FluentisContext _context;
-        private readonly ILogger<GrupoAprobacionesController> _logger; // logger
+        private readonly ILogger<GrupoAprobacionesController> _logger;
+        private readonly NotificationService _notificationService;
 
-        public GrupoAprobacionesController(FluentisContext context, ILogger<GrupoAprobacionesController> logger)
+        public GrupoAprobacionesController(FluentisContext context, ILogger<GrupoAprobacionesController> logger, NotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         // GET: api/GrupoAprobaciones
@@ -182,6 +185,19 @@ namespace FluentisCore.Controllers
                 }
                 await _context.SaveChangesAsync();
 
+                // Notificar a cada usuario agregado durante la creación del grupo
+                foreach (var usuarioId in dto.UsuarioIds)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarAgregarGrupoAsync(usuarioId, grupo.Nombre);
+                    }
+                    catch (Exception notifEx)
+                    {
+                        _logger.LogWarning(notifEx, $"No se pudo notificar al usuario {usuarioId} en creación de grupo {grupo.IdGrupo}");
+                    }
+                }
+
                 var g = await _context.GruposAprobacion
                     .Include(gr => gr.RelacionesUsuarioGrupo)
                         .ThenInclude(r => r.Usuario)
@@ -313,6 +329,20 @@ namespace FluentisCore.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Notificar a cada nuevo usuario agregado
+                foreach (var usuarioId in nuevosUsuarios)
+                {
+                    try
+                    {
+                        await _notificationService.NotificarAgregarGrupoAsync(usuarioId, grupo.Nombre);
+                    }
+                    catch (Exception notifEx)
+                    {
+                        _logger.LogWarning(notifEx, $"No se pudo notificar al usuario {usuarioId}");
+                    }
+                }
+
                 var recargado = await CargarGrupoConUsuarios(id);
                 if (recargado == null) return NotFound();
                 return MapGrupo(recargado);
@@ -338,6 +368,24 @@ namespace FluentisCore.Controllers
                 }
                 _context.RelacionesUsuarioGrupo.Remove(relacion);
                 await _context.SaveChangesAsync();
+
+                // Notificar al usuario removido
+                try
+                {
+                    var grupo = await _context.GruposAprobacion
+                        .Where(g => g.IdGrupo == id)
+                        .Select(g => g.Nombre)
+                        .FirstOrDefaultAsync();
+                    
+                    if (grupo != null)
+                    {
+                        await _notificationService.NotificarRemoverGrupoAsync(usuarioId, grupo);
+                    }
+                }
+                catch (Exception notifEx)
+                {
+                    _logger.LogWarning(notifEx, $"No se pudo notificar al usuario {usuarioId}");
+                }
 
                 var recargado = await CargarGrupoConUsuarios(id);
                 if (recargado == null) return NotFound();
