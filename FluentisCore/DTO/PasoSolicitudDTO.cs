@@ -28,7 +28,6 @@ namespace FluentisCore.DTO
         public string? Nombre { get; set; }
         public int? PosX { get; set; }
         public int? PosY { get; set; }
-        // Permitir actualizar la regla de aprobación en pasos de tipo Aprobación
         public ReglaAprobacion? ReglaAprobacion { get; set; }
     }
 
