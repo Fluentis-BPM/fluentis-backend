@@ -16,7 +16,7 @@ using FluentisCore.Services;
 
 namespace FluentisCore.Controllers
 {
-    [Route("api/pasosolicitudes")]
+    [Route("api/[controller]")]
     [ApiController]
     [Authorize(Policy = "RequireAccessAsUser")]
     public class PasoSolicitudController : ControllerBase
