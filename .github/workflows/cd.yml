@@ -28,8 +28,14 @@ jobs:
     - name: Publish
       run: dotnet publish FluentisCore/FluentisCore.csproj --configuration Release --output ./publish --no-build
     
+    - name: Clear NuGet cache (fix dotnet-ef installation)
+      run: dotnet nuget locals all --clear
+    
     - name: Install EF Core Tools
-      run: dotnet tool install --global dotnet-ef
+      run: dotnet tool install --global dotnet-ef --version 9.0.0
+    
+    - name: Restore local tools
+      run: dotnet tool restore
     
     - name: Generate Migration Script
       run: |
@@ -81,8 +87,34 @@ jobs:
     - name: Publish
       run: dotnet publish FluentisCore/FluentisCore.csproj --configuration Release --output ./publish --no-build
     
+    - name: Clear NuGet cache (fix dotnet-ef installation)
+      run: dotnet nuget locals all --clear
+    
     - name: Install EF Core Tools
-      run: dotnet tool install --global dotnet-ef
+      run: dotnet tool install --global dotnet-ef --version 9.0.0
+    
+    - name: Restore local tools
+      run: dotnet tool restore
+    
+    - name: Generate Migration Script
+      run: |
+        dotnet ef migrations script \
+          --project FluentisCore/FluentisCore.csproj \
+          --startup-project FluentisCore/FluentisCore.csproj \
+          --idempotent \
+          --output ./publish/migrations.sql
+    
+    - name: Publish
+      run: dotnet publish FluentisCore/FluentisCore.csproj --configuration Release --output ./publish --no-build
+    
+    - name: Clear NuGet cache (fix dotnet-ef installation)
+      run: dotnet nuget locals all --clear
+    
+    - name: Install EF Core Tools
+      run: dotnet tool install --global dotnet-ef --version 9.0.0
+    
+    - name: Restore local tools
+      run: dotnet tool restore
     
     - name: Generate Migration Script
       run: |
