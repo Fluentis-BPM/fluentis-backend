@@ -212,13 +212,15 @@ namespace FluentisCore.Extensions
                 _ => "normal"
             };
 
-        // Frontend: 'unanime' | 'individual' | 'ancla'
+        // Frontend: 'unanime' | 'individual' (Mayoría) | 'ancla' (PrimeraAprobacion)
         private static string MapReglaAprobacion(ReglaAprobacion regla)
             => regla switch
             {
                 ReglaAprobacion.Unanimidad => "unanime",
-                ReglaAprobacion.PrimeraAprobacion => "individual",
-                ReglaAprobacion.Mayoria => "ancla",
+                // "Ancla" en el frontend corresponde a PrimeraAprobacion en backend
+                ReglaAprobacion.PrimeraAprobacion => "ancla",
+                // "Mayoría" en el frontend se representa con la clave "individual"
+                ReglaAprobacion.Mayoria => "individual",
                 _ => "individual"
             };
 
