@@ -241,13 +241,25 @@ namespace FluentisCore.Services
             await _context.SaveChangesAsync();
 
             // Inputs desde plantilla (asignando SolicitudId explícitamente)
+            // Nota: una plantilla puede repetir el mismo InputId múltiples veces.
+            // Para que cada instancia sea independiente, el frontend envía OverridesValores con llave por posición (idx).
+            // Mantenemos compatibilidad con el formato viejo por InputId como fallback.
             var inputsRelacion = new List<RelacionInput>();
+            var idx = 0;
             foreach (var pin in plantilla.Inputs)
             {
                 string? valor = pin.ValorPorDefecto;
-                if (dto.OverridesValores != null && dto.OverridesValores.TryGetValue(pin.InputId, out var overrideValor))
+
+                if (dto.OverridesValores != null)
                 {
-                    valor = overrideValor;
+                    if (dto.OverridesValores.TryGetValue(idx, out var overrideByIndex))
+                    {
+                        valor = overrideByIndex;
+                    }
+                    else if (dto.OverridesValores.TryGetValue(pin.InputId, out var overrideByInputId))
+                    {
+                        valor = overrideByInputId;
+                    }
                 }
 
                 inputsRelacion.Add(new RelacionInput
@@ -260,6 +272,8 @@ namespace FluentisCore.Services
                     Valor = valor ?? string.Empty,
                     OptionsJson = pin.OpcionesJson
                 });
+
+                idx++;
             }
             if (inputsRelacion.Count > 0)
             {
